@@ -162,7 +162,7 @@ legend { padding: 0 4px; }
 html:not(.is-desktop) .desk-only { display: none !important; }
 html.is-desktop, html.is-desktop body { height: 100%; overflow: hidden; }
 html.is-desktop body { padding: 0; background: var(--face); }
-.is-desktop .window { max-width: none; height: 100%; }
+.is-desktop #app { max-width: none; height: 100%; }
 .is-desktop .main { flex: 1; min-height: 0; }
 .is-desktop .lv { max-height: none; }
 .is-desktop #app > .titlebar { -webkit-app-region: drag; user-select: none; }
@@ -260,6 +260,7 @@ textarea.inp { width: 100%; height: 200px; font: 11px/1.4 var(--mono); resize: v
         <button class="ditem" data-act="edit-sel"><span>Edit selected…</span><span class="key">Enter</span></button>
         <button class="ditem" data-act="delete-sel"><span>Delete selected</span><span class="key">Del</span></button>
         <div class="dsep"></div>
+        <button class="ditem" data-act="new-fixed"><span>New fixed expense…</span></button>
         <button class="ditem" data-act="post-fixed"><span>Post due fixed expenses</span><span class="key">F9</span></button>
       </div>
     </div>
@@ -282,6 +283,10 @@ textarea.inp { width: 100%; height: 200px; font: 11px/1.4 var(--mono); resize: v
       <div class="drop raised" id="m-tools" role="menu" hidden>
         <button class="ditem" data-act="go" data-view="categories"><span>Categories &amp; budgets</span></button>
         <button class="ditem" data-act="go" data-view="household"><span>Household &amp; settle up</span></button>
+        <div class="dsep"></div>
+        <button class="ditem" data-act="new-cat"><span>New category…</span></button>
+        <button class="ditem" data-act="new-acct"><span>New payment method…</span></button>
+        <button class="ditem" data-act="new-member"><span>New household member…</span></button>
       </div>
     </div>
     <div class="menu"><button class="mbtn" data-menu="help" aria-expanded="false" aria-haspopup="true"><u>H</u>elp</button>
@@ -318,7 +323,6 @@ textarea.inp { width: 100%; height: 200px; font: 11px/1.4 var(--mono); resize: v
   </div>
 </div>
 
-<div class="overlay" id="overlay" hidden><div class="dialog window raised" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title"></div></div>
 
 <script>
 (() => {
@@ -457,7 +461,7 @@ const acct = id => S.accounts.find(a => a.id === id);
 const isCard = t => acct(t.method)?.kind === 'credit';
 const acctIco = a => ico(a.kind === 'credit' ? 'card' : a.kind);
 const methodLabel = id => { const a = acct(id); return a ? `<span class="tdesc">${acctIco(a)}<span>${esc(a.name)}${a.last4 ? ' ••' + esc(a.last4) : ''}</span></span>` : '<span class="mute">–</span>'; };
-const methodOpts = sel => '<option value="">(not set)</option>' + S.accounts.map(a => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.name)}${a.last4 ? ' ••' + esc(a.last4) : ''}</option>`).join('');
+const methodOpts = sel => '<option value="">(not set)</option>' + S.accounts.map(a => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.name)}${a.last4 ? ' ••' + esc(a.last4) : ''}</option>`).join('') + '<option value="__new">＋ New payment method…</option>';
 // Credit card statements: a charge belongs to the statement that closes on the next closing day.
 function stmtClose(card, ds) {
   const m = ymOf(ds), c = Math.min(card.closingDay, dim(m));
@@ -805,26 +809,28 @@ let stTimer;
 function status(msg) { const el = $('#sb3'); el.textContent = msg; el.dataset.msg = '1'; clearTimeout(stTimer); stTimer = setTimeout(() => { delete el.dataset.msg; render(); }, 5000); }
 
 /* ---------- Dialogs ---------- */
-let dlgSubmit = null, lastFocus = null;
+// Dialogs stack: a dialog can open another one on top (e.g. New category from inside New entry).
+const layers = [];
+const topDlg = () => layers[layers.length - 1]?.ov || null;
 function dialog(title, body, { ok = 'OK', cancel = 'Cancel', onSubmit, wide = false } = {}) {
-  lastFocus = document.activeElement;
-  const d = $('#dialog');
-  d.style.width = wide ? 'min(620px, 100%)' : '';
-  d.innerHTML = `<div class="titlebar"><span id="dlg-title">${esc(title)}</span><button class="dx raised" data-act="dlg-close" aria-label="Close">✕</button></div>
-    <form id="dlg-form" novalidate><div class="dbody">${body}<div class="err" id="dlg-err" role="alert"></div></div>
-    <div class="dfoot">${ok ? `<button class="btn raised default" type="submit">${esc(ok)}</button>` : ''}${cancel ? `<button class="btn raised" type="button" data-act="dlg-close">${esc(cancel)}</button>` : ''}</div></form>`;
-  dlgSubmit = onSubmit || (() => true);
-  $('#overlay').hidden = false;
-  (d.querySelector('.dbody input:not([type=hidden]), .dbody select, .dbody textarea') || d.querySelector('.dfoot .btn'))?.focus();
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `<div class="dialog window raised" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide ? 'style="width:min(620px, 100%)"' : ''}>
+    <div class="titlebar"><span>${esc(title)}</span><button class="dx raised" data-act="dlg-close" aria-label="Close">✕</button></div>
+    <form class="dlg-form" novalidate><div class="dbody">${body}<div class="err dlg-err" role="alert"></div></div>
+    <div class="dfoot">${ok ? `<button class="btn raised default" type="submit">${esc(ok)}</button>` : ''}${cancel ? `<button class="btn raised" type="button" data-act="dlg-close">${esc(cancel)}</button>` : ''}</div></form></div>`;
+  document.body.appendChild(ov);
+  layers.push({ ov, submit: onSubmit || (() => true), lastFocus: document.activeElement });
+  (ov.querySelector('.dbody input:not([type=hidden]), .dbody select, .dbody textarea') || ov.querySelector('.dfoot .btn'))?.focus();
 }
-function closeDialog() { $('#overlay').hidden = true; $('#dialog').innerHTML = ''; dlgSubmit = null; lastFocus?.focus?.(); }
+function closeDialog() { const l = layers.pop(); if (!l) return; l.ov.remove(); l.lastFocus?.focus?.(); }
 function msgBox(title, text, { ok = 'OK', cancel = null, warn = false, onOk } = {}) {
   dialog(title, `<div class="msg"><span class="big ${warn ? 'warn' : ''}" aria-hidden="true">${warn ? '' : 'i'}</span><div>${text}</div></div>`, { ok, cancel, onSubmit: () => { onOk?.(); return true; } });
 }
-function dlgErr(m) { $('#dlg-err').textContent = m; return false; }
+function dlgErr(m) { const e = topDlg()?.querySelector('.dlg-err'); if (e) e.textContent = m; return false; }
 
-const memberOpts = (sel, incl = true) => [...S.members, ...(incl ? [JOINT] : [])].map(p => `<option ${p === sel ? 'selected' : ''}>${esc(p)}</option>`).join('') + (sel && !S.members.includes(sel) && sel !== JOINT ? `<option selected>${esc(sel)}</option>` : '');
-const catOpts = (kind, sel) => S.categories.filter(c => c.kind === kind).map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+const memberOpts = (sel, incl = true) => [...S.members, ...(incl ? [JOINT] : [])].map(p => `<option ${p === sel ? 'selected' : ''}>${esc(p)}</option>`).join('') + (sel && !S.members.includes(sel) && sel !== JOINT ? `<option selected>${esc(sel)}</option>` : '') + '<option value="__new">＋ New household member…</option>';
+const catOpts = (kind, sel) => S.categories.filter(c => c.kind === kind).map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('') + '<option value="__new">＋ New category…</option>';
 
 function entryDialog(t, presetType) {
   const isNew = !t;
@@ -835,9 +841,9 @@ function entryDialog(t, presetType) {
       <label for="f-type">Type:</label><span class="typepick"><span id="f-type-ico">${ico(t.type)}</span><select class="inp" id="f-type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}" ${t.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></span>
       <label for="f-desc">Description:</label><input class="inp" id="f-desc" value="${esc(t.desc)}" maxlength="80" placeholder="e.g. Lunch with colleagues">
       <label for="f-amount">Amount (€):</label><input class="inp num" id="f-amount" type="number" step="0.01" min="0" inputmode="decimal" value="${t.amount}">
-      <label for="f-cat">Category:</label><select class="inp" id="f-cat">${catOpts(kind(t.type), t.cat)}</select>
-      <label for="f-paid" id="f-paid-l">${t.type === 'income' ? 'Received by:' : 'Paid by:'}</label><select class="inp" id="f-paid">${memberOpts(t.paidBy)}</select>
-      <label for="f-method" id="f-method-l">Paid with:</label><select class="inp" id="f-method">${methodOpts(t.method)}</select>
+      <label for="f-cat">Category:</label><select class="inp" id="f-cat" data-add="cat">${catOpts(kind(t.type), t.cat)}</select>
+      <label for="f-paid" id="f-paid-l">${t.type === 'income' ? 'Received by:' : 'Paid by:'}</label><select class="inp" id="f-paid" data-add="member">${memberOpts(t.paidBy)}</select>
+      <label for="f-method" id="f-method-l">Paid with:</label><select class="inp" id="f-method" data-add="method">${methodOpts(t.method)}</select>
       <span></span><span><label id="f-clear-w"><input type="checkbox" id="f-clear" ${t.cleared !== false ? 'checked' : ''}> <span id="f-clear-l">Already paid</span></label><span class="mute" id="f-card-hint" hidden>Paid when you settle the card statement.</span></span>
       <div class="row" id="r-store" ${t.type === 'groceries' ? '' : 'hidden'}><label for="f-store">Store:</label><input class="inp" id="f-store" value="${esc(t.store || '')}" maxlength="40" list="stores"></div>
       <div class="row" id="r-fuel" ${t.type === 'fuel' ? '' : 'hidden'}><label for="f-liters">Litres:</label><input class="inp num" id="f-liters" type="number" step="0.01" min="0" value="${t.liters ?? ''}">
@@ -884,9 +890,9 @@ function fixedDialog(f) {
       <label for="x-amount">Amount (€):</label><input class="inp num" id="x-amount" type="number" step="0.01" min="0" value="${f.amount}">
       <label for="x-day">Day of month:</label><input class="inp num" id="x-day" type="number" min="1" max="31" value="${f.day}">
       <span class="hint">Day 31 posts on the last day of shorter months.</span>
-      <label for="x-cat">Category:</label><select class="inp" id="x-cat">${catOpts('expense', f.cat)}</select>
-      <label for="x-paid">Paid by:</label><select class="inp" id="x-paid">${memberOpts(f.paidBy)}</select>
-      <label for="x-method">Paid with:</label><select class="inp" id="x-method">${methodOpts(f.method)}</select>
+      <label for="x-cat">Category:</label><select class="inp" id="x-cat" data-add="cat">${catOpts('expense', f.cat)}</select>
+      <label for="x-paid">Paid by:</label><select class="inp" id="x-paid" data-add="member">${memberOpts(f.paidBy)}</select>
+      <label for="x-method">Paid with:</label><select class="inp" id="x-method" data-add="method">${methodOpts(f.method)}</select>
       <span></span><label><input type="checkbox" id="x-active" ${f.active ? 'checked' : ''}> Active (uncheck to pause)</label>
     </div>`, {
     onSubmit() {
@@ -919,7 +925,7 @@ function payStmtDialog(cardId, close) {
     }
   });
 }
-function acctDialog(a) {
+function acctDialog(a, onSaved) {
   const isNew = !a;
   a = a || { name: '', kind: 'credit', last4: '', limit: '', closingDay: 25, dueDay: 15 };
   dialog(isNew ? 'Add payment method' : 'Edit payment method', `<div class="form">
@@ -942,11 +948,36 @@ function acctDialog(a) {
         Object.assign(rec, { limit: Math.max(0, parseFloat($('#a-limit').value) || 0), closingDay: c, dueDay: d });
       } else { delete rec.limit; delete rec.closingDay; delete rec.dueDay; }
       if (isNew) S.accounts.push(rec); else S.accounts[S.accounts.findIndex(x => x.id === a.id)] = rec;
-      commit(isNew ? `Added ${name}` : `Saved ${name}`); return true;
+      commit(isNew ? `Added ${name}` : `Saved ${name}`); onSaved?.(rec); return true;
     }
   });
   const sync = () => { const k = $('#a-kind').value; $('#a-credit').hidden = k !== 'credit'; $('#a-cardno').hidden = !(k === 'credit' || k === 'debit'); };
   $('#a-kind').addEventListener('change', sync); sync();
+}
+// Handles the "+ New…" choice in a dropdown: add the item in a small dialog, then select it.
+function quickAdd(sel) {
+  const what = sel.dataset.add, done = val => { sel.dataset.prev = val; sel.value = val; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+  if (what === 'method') return acctDialog(null, rec => { sel.innerHTML = methodOpts(rec.id); done(rec.id); });
+  if (what === 'cat') {
+    const kind = sel.id === 'f-cat' && $('#f-type')?.value === 'income' ? 'income' : 'expense';
+    return dialog(kind === 'income' ? 'New income category' : 'New category', `<div class="form">
+        <label for="q-name">Name:</label><input class="inp" id="q-name" maxlength="40" placeholder="${kind === 'income' ? 'e.g. Freelance' : 'e.g. Pets'}">
+        ${kind === 'expense' ? '<label for="q-budget">Monthly budget (€):</label><input class="inp num" id="q-budget" type="number" min="0" step="10" placeholder="optional">' : ''}</div>`, {
+      onSubmit() {
+        const name = $('#q-name').value.trim(); if (!name) return dlgErr('Enter a name.');
+        if (S.categories.some(c => c.kind === kind && c.name.toLowerCase() === name.toLowerCase())) return dlgErr(`${name} already exists.`);
+        const c = { id: uid(), name, kind, budget: parseFloat($('#q-budget')?.value) || 0 };
+        S.categories.push(c); commit(`Added category ${name}`); sel.innerHTML = catOpts(kind, c.id); done(c.id); return true;
+      } });
+  }
+  if (what === 'member') {
+    return dialog('New household member', `<div class="form"><label for="q-member">Name:</label><input class="inp" id="q-member" maxlength="30"></div>`, {
+      onSubmit() {
+        const name = $('#q-member').value.trim(); if (!name) return dlgErr('Enter a name.');
+        if (S.members.includes(name) || name === JOINT) return dlgErr(`${name} is already a member.`);
+        S.members.push(name); commit(`Added ${name} to the household`); sel.innerHTML = memberOpts(name); done(name); return true;
+      } });
+  }
 }
 function postFixed() {
   const m = ui.month, due = S.fixed.filter(f => fixedStatus(f, m) === 'due');
@@ -1020,6 +1051,8 @@ const actions = {
       onOk() { S.tx.forEach(t => { if (t.settled === p.id) delete t.settled; }); S.cardPayments = S.cardPayments.filter(x => x.id !== p.id); commit('Card payment undone'); } });
   },
   'new-acct': () => acctDialog(null),
+  'new-cat': () => quickAdd({ dataset: { add: 'cat' }, id: '', dispatchEvent() {} }),
+  'new-member': () => quickAdd({ dataset: { add: 'member' }, id: '', dispatchEvent() {} }),
   'edit-acct': el => acctDialog(acct(el.dataset.id)),
   'del-acct': el => {
     const a = acct(el.dataset.id), n = S.tx.filter(t => t.method === a.id).length + S.fixed.filter(f => f.method === a.id).length;
@@ -1058,7 +1091,7 @@ document.addEventListener('mouseover', e => { const mb = e.target.closest('.mbtn
 document.addEventListener('dblclick', e => { if (DESK && e.target.closest('#app > .titlebar') && !e.target.closest('button')) { DESK.win('maximize'); return; } const tr = e.target.closest('tr[data-id]'); if (tr) { ui.sel = { kind: tr.dataset.kind, id: tr.dataset.id }; editSel(); } });
 document.addEventListener('submit', e => {
   e.preventDefault();
-  if (e.target.id === 'dlg-form') { if (dlgSubmit && dlgSubmit() !== false) closeDialog(); return; }
+  if (e.target.classList.contains('dlg-form')) { const l = layers[layers.length - 1]; if (l && l.ov.contains(e.target) && l.submit() !== false) closeDialog(); return; }
   if (e.target.id === 'addcat') {
     const name = $('#nc-name').value.trim(); if (!name) return;
     S.categories.push({ id: uid(), name, kind: $('#nc-kind').value, budget: parseFloat($('#nc-budget').value) || 0 }); commit(`Added category ${name}`);
@@ -1073,6 +1106,14 @@ document.addEventListener('input', e => {
   const id = e.target.id;
   if (id === 'flt-q') { ui.filter.q = e.target.value; regList(); }
 });
+document.addEventListener('change', e => {
+  const sel = e.target;
+  if (sel.tagName === 'SELECT' && sel.dataset.add) {
+    if (sel.value === '__new') { sel.value = sel.dataset.prev ?? sel.options[0]?.value ?? ''; quickAdd(sel); }
+    else sel.dataset.prev = sel.value;
+  }
+}, true);
+document.addEventListener('focusin', e => { const t = e.target; if (t.tagName === 'SELECT' && t.dataset.add && t.value !== '__new') t.dataset.prev = t.value; });
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.id === 'flt-type') { ui.filter.type = t.value; regList(); }
@@ -1093,10 +1134,10 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('keydown', e => {
-  const dlg = !$('#overlay').hidden, typing = /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
+  const dlg = layers.length > 0, typing = /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
   if (e.key === 'Escape') { if (dlg) closeDialog(); else if (openMenu) setMenu(null); return; }
   if (dlg) {
-    if (e.key === 'Tab') { const f = [...$('#dialog').querySelectorAll('button, input, select, textarea')].filter(x => !x.disabled && x.offsetParent); if (!f.length) return;
+    if (e.key === 'Tab') { const f = [...topDlg().querySelectorAll('button, input, select, textarea')].filter(x => !x.disabled && x.offsetParent); if (!f.length) return;
       const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
     return;
   }
