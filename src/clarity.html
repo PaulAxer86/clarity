@@ -147,6 +147,14 @@ legend { padding: 0 4px; }
 .vhead h1 { display: inline-flex; align-items: center; gap: 6px; }
 .typepick { display: flex; align-items: center; gap: 6px; }
 .typepick .inp { flex: 1; }
+.chk { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 0; font-size: 11px; cursor: default; white-space: nowrap; }
+.chk .box { width: 13px; height: 13px; flex: none; display: grid; place-items: center; background: var(--win); box-shadow: inset 1px 1px var(--sh), inset -1px -1px var(--hi), inset 2px 2px var(--dk); color: var(--pos); font: bold 11px/1 var(--ui); }
+.chk.topay { color: var(--neg); } .chk.expected { color: var(--warn); } .chk.oncard, .chk:disabled { color: var(--mute); }
+.chk:disabled .box { background: var(--face-2); }
+.chk:focus-visible { outline: 1px dotted var(--ink); }
+.lv tbody tr.sel .chk { color: var(--sel-ink); }
+.warn { color: var(--warn); }
+.cardhead { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 24px; margin-bottom: 10px; }
 
 /* Desktop app (Electron) */
 .wbtns { margin-left: auto; display: flex; gap: 2px; }
@@ -263,6 +271,7 @@ textarea.inp { width: 100%; height: 200px; font: 11px/1.4 var(--mono); resize: v
         <button class="ditem" data-act="go" data-view="daily"><span>Daily spending</span></button>
         <button class="ditem" data-act="go" data-view="groceries"><span>Groceries</span></button>
         <button class="ditem" data-act="go" data-view="fuel"><span>Fuel log</span></button>
+        <button class="ditem" data-act="go" data-view="cards"><span>Cards &amp; accounts</span></button>
         <button class="ditem" data-act="go" data-view="reports"><span>Reports</span></button>
         <div class="dsep"></div>
         <button class="ditem" data-act="prev-month"><span>Previous month</span><span class="key">PgUp</span></button>
@@ -337,7 +346,11 @@ const ICONS = {
   daily: svg('<path d="M5 1.5c-1 1 1 2 0 3M8 1.5c-1 1 1 2 0 3" fill="none" stroke="#808080"/><path d="M2.5 6.5h9v5a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2z" fill="#fff" stroke="#404040"/><rect x="3" y="7" width="8" height="2" fill="#7a4a22"/><path d="M11.5 7.5h1.5a1.5 1.5 0 0 1 0 3h-1.5" fill="none" stroke="#404040"/><rect x="1" y="14" width="13" height="1" fill="#404040"/>'),
   groceries: svg('<rect x="6" y="1" width="3" height="4" fill="#e8c45a" stroke="#8a6d12" stroke-width=".8"/><circle cx="11" cy="3.3" r="1.8" fill="#c03030"/><path d="M4 4.5h10.6l-1.6 5.5H5.5z" fill="#9fd18b"/><path d="M.5 2.5h2l2.2 8h8.6l2-6.5H3.6" fill="none" stroke="#404040"/><circle cx="6" cy="13" r="1.4" fill="#404040"/><circle cx="12" cy="13" r="1.4" fill="#404040"/>'),
   fuel: svg('<rect x="2.5" y="2.5" width="8" height="11" fill="#c03030" stroke="#404040"/><rect x="4" y="4" width="5" height="3" fill="#fff"/><rect x="1" y="13.5" width="11" height="2" fill="#404040"/><path d="M10.5 5.5h2l1.5 2v5a1 1 0 0 1-2 0V10h-1.5" fill="none" stroke="#404040"/>'),
-  income: svg('<rect x="1.5" y="3.5" width="12" height="8" fill="#9fd18b" stroke="#2f6b2f"/><circle cx="7.5" cy="7.5" r="2" fill="#e6f3e6" stroke="#2f6b2f"/><circle cx="12" cy="12" r="3" fill="#e8c45a" stroke="#8a6d12"/><path d="M12 10.3v3.4" stroke="#8a6d12"/>')
+  income: svg('<rect x="1.5" y="3.5" width="12" height="8" fill="#9fd18b" stroke="#2f6b2f"/><circle cx="7.5" cy="7.5" r="2" fill="#e6f3e6" stroke="#2f6b2f"/><circle cx="12" cy="12" r="3" fill="#e8c45a" stroke="#8a6d12"/><path d="M12 10.3v3.4" stroke="#8a6d12"/>'),
+  card: svg('<rect x=".5" y="3.5" width="15" height="10" rx="1" fill="#2a5db0" stroke="#0a246a"/><rect x="1" y="5.5" width="14" height="2" fill="#0a246a"/><rect x="2.5" y="9" width="3" height="2" fill="#e8c45a"/><rect x="8" y="10" width="5" height="1" fill="#fff"/>'),
+  debit: svg('<rect x=".5" y="3.5" width="15" height="10" rx="1" fill="#3f8f4f" stroke="#2f6b2f"/><rect x="2.5" y="6" width="3" height="2" fill="#e8c45a"/><rect x="2.5" y="10" width="11" height="1" fill="#fff"/>'),
+  cash: svg('<rect x=".5" y="4.5" width="15" height="8" fill="#9fd18b" stroke="#2f6b2f"/><circle cx="8" cy="8.5" r="2" fill="#e6f3e6" stroke="#2f6b2f"/>'),
+  bank: svg('<path d="M1 6 8 2l7 4z" fill="#d4d0c8" stroke="#404040"/><rect x="2.5" y="7" width="2" height="5" fill="#808080"/><rect x="7" y="7" width="2" height="5" fill="#808080"/><rect x="11.5" y="7" width="2" height="5" fill="#808080"/><rect x="1" y="12.5" width="14" height="2" fill="#404040"/>')
 };
 const ico = k => ICONS[k] ? `<span class="ticon" aria-hidden="true">${ICONS[k]}</span>` : '';
 
@@ -350,10 +363,22 @@ const dim = m => { const [y, mo] = m.split('-').map(Number); return new Date(y, 
 const dFmt = s => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
 
 let S = null;
-const ui = { view: 'overview', month: ymOf(todayStr()), sel: null, filter: { type: '', cat: '', q: '', all: false }, sort: { key: 'date', dir: -1 }, lock: '' };
+const ui = { view: 'overview', month: ymOf(todayStr()), sel: null, filter: { type: '', cat: '', q: '', all: false, status: '', method: '' }, sort: { key: 'date', dir: -1 }, lock: '' };
 
 /* ---------- Sample data ---------- */
 function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const METHOD_KINDS = { cash: 'Cash', bank: 'Bank account', debit: 'Debit card', credit: 'Credit card' };
+function defaultAccounts(sample) {
+  const a = [{ id: 'cash', name: 'Cash', kind: 'cash' }, { id: 'bank', name: sample ? 'Joint current account' : 'Bank account', kind: 'bank' }, { id: 'debit', name: 'Debit card', kind: 'debit', last4: sample ? '1187' : '' }];
+  if (sample) a.push({ id: 'visa', name: 'Visa', kind: 'credit', last4: '4821', limit: 2500, closingDay: 25, dueDay: 15 }, { id: 'mc', name: 'Mastercard', kind: 'credit', last4: '9034', limit: 1500, closingDay: 5, dueDay: 28 });
+  return a;
+}
+// Brings ledgers saved by older versions up to date.
+function migrate(d) {
+  d.fixed ||= []; d.members ||= ['Me']; d.accounts ||= defaultAccounts(false); d.cardPayments ||= [];
+  for (const t of d.tx) if (t.cleared === undefined) t.cleared = true;
+  d.ver = 2; return d;
+}
 function sampleLedger() {
   const rnd = mulberry32(1113), R = (a, b) => a + (b - a) * rnd(), pick = a => a[Math.floor(rnd() * a.length)];
   const categories = [
@@ -363,45 +388,53 @@ function sampleLedger() {
     ['other','Other','expense',0],['salary','Salary','income',0],['otherinc','Other income','income',0]
   ].map(([id, name, kind, budget]) => ({ id, name, kind, budget }));
   const fixed = [
-    ['Rent', 850, 'housing', 1, 'Alex'], ['Gym membership', 35, 'leisure', 3, 'Alex'], ['Home internet', 29.9, 'utilities', 5, JOINT],
-    ['Mobile plans', 19.98, 'subs', 8, 'Alex'], ['Electricity', 74.6, 'utilities', 12, 'Sam'], ['Gas & heating', 96, 'utilities', 15, 'Sam'],
-    ['Streaming', 13.99, 'subs', 18, 'Sam'], ['Car insurance', 54.2, 'insurance', 20, 'Sam']
-  ].map(([name, amount, cat, day, paidBy]) => ({ id: uid(), name, amount, cat, day, paidBy, active: true }));
+    ['Rent', 850, 'housing', 1, 'Alex', 'bank'], ['Gym membership', 35, 'leisure', 3, 'Alex', 'visa'], ['Home internet', 29.9, 'utilities', 5, JOINT, 'bank'],
+    ['Mobile plans', 19.98, 'subs', 8, 'Alex', 'visa'], ['Electricity', 74.6, 'utilities', 12, 'Sam', 'bank'], ['Gas & heating', 96, 'utilities', 15, 'Sam', 'bank'],
+    ['Streaming', 13.99, 'subs', 18, 'Sam', 'mc'], ['Car insurance', 54.2, 'insurance', 20, 'Sam', 'bank']
+  ].map(([name, amount, cat, day, paidBy, method]) => ({ id: uid(), name, amount, cat, day, paidBy, method, active: true }));
   const daily = [['Coffee & croissant','dining',2.4,4.8],['Lunch out','dining',9,16],['Pizza night','dining',22,38],['Pharmacy','health',6,28],
     ['Cinema tickets','leisure',15,22],['Bookshop','leisure',9,28],['Parking','transport',1.5,6],['Hardware store','other',8,40],['Train ticket','transport',4.6,12.5],['Haircut','other',18,28]];
   const today = todayStr(), cur = ymOf(today), tx = [];
   let odo = 48210;
-  const add = t => { if (t.date <= today) tx.push({ id: uid(), note: '', ...t }); };
+  const add = t => { const { expected, ...rest } = t; if (t.date <= today || expected) tx.push({ id: uid(), note: '', cleared: !expected, ...rest }); };
   for (let k = 5; k >= 0; k--) {
     const m = addM(cur, -k), D = d => `${m}-${pad(Math.min(d, dim(m)))}`;
-    for (const f of fixed) add({ date: D(f.day), type: 'fixed', desc: f.name, amount: f.name === 'Electricity' || f.name === 'Gas & heating' ? r2(f.amount * R(.8, 1.25)) : f.amount, cat: f.cat, paidBy: f.paidBy, fixedId: f.id });
-    add({ date: D(27), type: 'income', desc: 'Salary', amount: 2450, cat: 'salary', paidBy: 'Alex' });
-    add({ date: D(10), type: 'income', desc: 'Salary', amount: 1820, cat: 'salary', paidBy: 'Sam' });
+    for (const f of fixed) add({ date: D(f.day), type: 'fixed', desc: f.name, amount: f.name === 'Electricity' || f.name === 'Gas & heating' ? r2(f.amount * R(.8, 1.25)) : f.amount, cat: f.cat, paidBy: f.paidBy, method: f.method, fixedId: f.id });
+    add({ date: D(27), type: 'income', desc: 'Salary', amount: 2450, cat: 'salary', paidBy: 'Alex', method: 'bank', expected: k === 0 });
+    add({ date: D(10), type: 'income', desc: 'Salary', amount: 1820, cat: 'salary', paidBy: 'Sam', method: 'bank' });
     for (const d of [2, 6, 9, 13, 17, 20, 24, 28]) {
       if (rnd() < .2) continue;
       const amt = r2(R(16, 98));
-      add({ date: D(d), type: 'groceries', desc: amt > 55 ? 'Weekly shop' : 'Top-up shop', amount: amt, cat: 'groceries', paidBy: pick(['Alex', 'Sam', JOINT]), store: pick(['Lidl', 'Coop', 'Farmers market', 'Corner shop', 'Coop']) });
+      add({ date: D(d), type: 'groceries', desc: amt > 55 ? 'Weekly shop' : 'Top-up shop', amount: amt, cat: 'groceries', paidBy: pick(['Alex', 'Sam', JOINT]), store: pick(['Lidl', 'Coop', 'Farmers market', 'Corner shop', 'Coop']), method: pick(['debit', 'debit', 'visa', 'cash']) });
     }
     for (const d of [4, 15, 26]) {
       const l = r2(R(32, 44)), p = R(1.74, 1.86); odo += Math.round(R(520, 690));
-      add({ date: D(d), type: 'fuel', desc: 'Full tank', amount: r2(l * p), cat: 'transport', paidBy: pick(['Alex', 'Sam']), liters: l, odometer: odo });
+      add({ date: D(d), type: 'fuel', desc: 'Full tank', amount: r2(l * p), cat: 'transport', paidBy: pick(['Alex', 'Sam']), liters: l, odometer: odo, method: pick(['visa', 'mc']) });
     }
     for (let i = 0; i < 11; i++) {
       const [desc, cat, a, b] = pick(daily);
-      add({ date: D(1 + Math.floor(rnd() * dim(m))), type: 'daily', desc, amount: r2(R(a, b)), cat, paidBy: pick(['Alex', 'Sam']) });
+      add({ date: D(1 + Math.floor(rnd() * dim(m))), type: 'daily', desc, amount: r2(R(a, b)), cat, paidBy: pick(['Alex', 'Sam']), method: pick(['cash', 'cash', 'debit', 'visa', 'mc']) });
     }
   }
-  return { ver: 1, sample: true, members: ['Alex', 'Sam'], categories, fixed, tx };
+  // Recent bills are still to pay; card statements already due are paid from the bank account.
+  const d0 = new Date(); d0.setDate(d0.getDate() - 3);
+  const recent = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}`;
+  for (const t of tx) if (t.type === 'fixed' && t.date > recent && t.method === 'bank') t.cleared = false;
+  const accounts = defaultAccounts(true);
+  const L = { ver: 2, sample: true, members: ['Alex', 'Sam'], categories, fixed, tx, accounts, cardPayments: [] };
+  for (const card of accounts.filter(a => a.kind === 'credit'))
+    for (const st of cardStatements(card, L)) if (st.due < today) settleStatement(L, card, st, st.due, 'bank');
+  return L;
 }
 function emptyLedger() {
   const s = sampleLedger();
-  return { ver: 1, sample: false, members: ['Me'], categories: s.categories.map(c => ({ ...c })), fixed: [], tx: [] };
+  return { ver: 2, sample: false, members: ['Me'], categories: s.categories.map(c => ({ ...c })), fixed: [], tx: [], accounts: defaultAccounts(false), cardPayments: [] };
 }
 
 /* ---------- Storage ---------- */
 let savedAt = null;
 function load() {
-  try { const raw = DESK ? DESK.load() : localStorage.getItem(LS_KEY); if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.tx) && Array.isArray(d.categories)) return d; } } catch (e) {}
+  try { const raw = DESK ? DESK.load() : localStorage.getItem(LS_KEY); if (raw) { const d = JSON.parse(raw); if (d && Array.isArray(d.tx) && Array.isArray(d.categories)) return migrate(d); } } catch (e) {}
   return sampleLedger();
 }
 function save() {
@@ -420,6 +453,54 @@ const cat = id => S.categories.find(c => c.id === id);
 const catName = id => cat(id)?.name ?? '(none)';
 const isInc = t => t.type === 'income';
 const inMonth = (t, m) => ymOf(t.date) === m;
+const acct = id => S.accounts.find(a => a.id === id);
+const isCard = t => acct(t.method)?.kind === 'credit';
+const acctIco = a => ico(a.kind === 'credit' ? 'card' : a.kind);
+const methodLabel = id => { const a = acct(id); return a ? `<span class="tdesc">${acctIco(a)}<span>${esc(a.name)}${a.last4 ? ' ••' + esc(a.last4) : ''}</span></span>` : '<span class="mute">–</span>'; };
+const methodOpts = sel => '<option value="">(not set)</option>' + S.accounts.map(a => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.name)}${a.last4 ? ' ••' + esc(a.last4) : ''}</option>`).join('');
+// Credit card statements: a charge belongs to the statement that closes on the next closing day.
+function stmtClose(card, ds) {
+  const m = ymOf(ds), c = Math.min(card.closingDay, dim(m));
+  if (Number(ds.slice(8)) <= c) return `${m}-${pad(c)}`;
+  const n = addM(m, 1); return `${n}-${pad(Math.min(card.closingDay, dim(n)))}`;
+}
+function stmtDue(card, close) { const m = ymOf(close), dm = card.dueDay > card.closingDay ? m : addM(m, 1); return `${dm}-${pad(Math.min(card.dueDay, dim(dm)))}`; }
+function cardStatements(card, L = S) {
+  const map = {}, today = todayStr();
+  for (const t of L.tx) {
+    if (t.method !== card.id || t.type === 'income') continue;
+    const c = stmtClose(card, t.date);
+    const st = (map[c] ||= { close: c, due: stmtDue(card, c), tx: [], total: 0, open: 0 });
+    st.tx.push(t); st.total += t.amount; if (!t.settled) st.open += t.amount;
+  }
+  return Object.values(map).sort((a, b) => b.close.localeCompare(a.close)).map(st => {
+    st.state = st.open < 0.005 ? 'paid' : st.close >= today ? 'open' : st.due < today ? 'overdue' : 'due'; return st;
+  });
+}
+function settleStatement(L, card, st, date, from) {
+  const id = uid(), amount = r2(st.tx.filter(t => !t.settled).reduce((a, t) => a + t.amount, 0));
+  for (const t of st.tx) if (!t.settled) t.settled = id;
+  L.cardPayments.push({ id, card: card.id, close: st.close, date, amount, from });
+}
+const STATE = { received: ['Received', 'pos'], expected: ['Expected', 'warn'], paid: ['Paid', 'pos'], topay: ['To pay', 'neg'], oncard: ['On card', 'mute'] };
+function txState(t) {
+  if (isInc(t)) return t.cleared ? 'received' : 'expected';
+  if (isCard(t)) return t.settled ? 'paid' : 'oncard';
+  return t.cleared ? 'paid' : 'topay';
+}
+function statusCell(t) {
+  const s = txState(t), card = isCard(t) && !isInc(t), done = s === 'paid' || s === 'received';
+  const late = (s === 'topay' || s === 'expected') && t.date < todayStr();
+  const tip = card ? 'Settled when the card statement is paid' : done ? `Mark as not ${isInc(t) ? 'received' : 'paid'}` : `Mark as ${isInc(t) ? 'received' : 'paid'} (Space)`;
+  return `<button class="chk ${s}" data-act="toggle-clear" data-id="${t.id}" title="${tip}" aria-pressed="${done}" ${card ? 'disabled' : ''}><span class="box">${done ? '✓' : ''}</span>${STATE[s][0]}${late ? ' (late)' : ''}</button>`;
+}
+function openItems() {
+  const today = todayStr(), items = [];
+  for (const t of S.tx) { const s = txState(t); if (s === 'topay' || s === 'expected') items.push({ kind: 'tx', t, s, date: t.date, amount: t.amount, overdue: t.date < today }); }
+  for (const card of S.accounts.filter(a => a.kind === 'credit'))
+    for (const st of cardStatements(card)) if (st.state === 'due' || st.state === 'overdue') items.push({ kind: 'stmt', card, st, s: 'stmt', date: st.due, amount: st.open, overdue: st.state === 'overdue' });
+  return items.sort((a, b) => a.date.localeCompare(b.date));
+}
 function monthStats(m) {
   const tx = S.tx.filter(t => inMonth(t, m));
   let inc = 0, exp = 0; const byType = { fixed: 0, daily: 0, groceries: 0, fuel: 0 }, byCat = {}, fixedByCat = {};
@@ -451,7 +532,7 @@ function fixedStatus(f, m) {
 const TREE = [
   { v: 'overview', l: 'Overview' }, { v: 'register', l: 'Register' },
   { l: 'Expenses', kids: [{ v: 'fixed', l: 'Fixed expenses', i: 'fixed' }, { v: 'daily', l: 'Daily spending', i: 'daily' }, { v: 'groceries', l: 'Groceries', i: 'groceries' }, { v: 'fuel', l: 'Fuel log', i: 'fuel' }] },
-  { v: 'reports', l: 'Reports' },
+  { v: 'cards', l: 'Cards & accounts', i: 'card' }, { v: 'reports', l: 'Reports' },
   { l: 'Setup', kids: [{ v: 'categories', l: 'Categories & budgets' }, { v: 'household', l: 'Household' }] }
 ];
 function renderTree() {
@@ -499,6 +580,17 @@ const VIEWS = {
       <div class="xl">${ms.map(x => `<span class="${x === m ? 'cur' : ''}">${mShort(x)}</span>`).join('')}</div>
     </div><div class="legend"><span><i style="background:var(--pos)"></i>Income</span><span><i style="background:var(--neg)"></i>Expenses</span></div>`;
     const recent = st.tx.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+    const open = openItems(), toGet = open.filter(o => o.s === 'expected').reduce((a, o) => a + o.amount, 0), toPay = open.filter(o => o.s !== 'expected').reduce((a, o) => a + o.amount, 0);
+    const orow = o => o.kind === 'tx'
+      ? `<tr data-kind="tx" data-id="${o.t.id}" class="${ui.sel?.id === o.t.id ? 'sel' : ''}"><td>${dFmt(o.date)}</td><td class="wrap"><span class="tdesc">${ico(o.t.type)}<span>${esc(o.t.desc)}</span></span></td>
+          <td>${o.s === 'expected' ? `<span class="pill warn">${o.overdue ? 'Late' : 'Expected'}</span>` : `<span class="pill neg">${o.overdue ? 'Overdue' : 'To pay'}</span>`}</td>
+          <td class="num ${o.s === 'expected' ? 'pos' : ''}">${o.s === 'expected' ? '+' : '−'}${money(o.amount)}</td><td><button class="btn sm raised" data-act="toggle-clear" data-id="${o.t.id}">${o.s === 'expected' ? 'Received' : 'Paid'}</button></td></tr>`
+      : `<tr><td>${dFmt(o.date)}</td><td class="wrap"><span class="tdesc">${ico('card')}<span>${esc(o.card.name)} statement${o.card.last4 ? ' ••' + esc(o.card.last4) : ''}</span></span></td>
+          <td><span class="pill ${o.overdue ? 'neg' : 'warn'}">${o.overdue ? 'Overdue' : 'Due'}</span></td><td class="num">−${money(o.amount)}</td><td><button class="btn sm raised" data-act="pay-stmt" data-card="${o.card.id}" data-close="${o.st.close}">Pay…</button></td></tr>`;
+    const openHtml = `<fieldset><legend>To pay &amp; to receive</legend>
+        <div class="lv sunken" style="max-height:260px"><table style="min-width:480px"><thead><tr><th class="raised">Date</th><th class="raised">Item</th><th class="raised">Status</th><th class="raised num">Amount</th><th class="raised"></th></tr></thead><tbody>
+        ${open.length ? open.map(orow).join('') : '<tr class="empty"><td colspan="5">Nothing outstanding. Every bill is paid and every payment received.</td></tr>'}</tbody></table></div>
+        <p class="mute" style="margin:6px 0 0">To pay: <b class="neg">${money(toPay)}</b> · To receive: <b class="pos">${money(toGet)}</b> · Card charges show up here when their statement closes.</p></fieldset>`;
     return head('Overview', `Where the money went in ${mLabel(m)}.`) + sampleBar() + `
       <div class="cols">
         <fieldset><legend>Summary</legend><table class="kv">
@@ -515,6 +607,7 @@ const VIEWS = {
         </div>
         <p class="mute" style="margin:10px 0 0">Fixed expenses take ${st.exp ? Math.round(fixedTot / st.exp * 100) : 0}% of this month's spending.</p></fieldset>
       </div>
+      ${openHtml}
       <fieldset><legend>Budgets for ${mLabel(m)}${isCur ? ` (day ${todayStr().slice(8)} of ${dim(m)})` : ''}</legend>
         <div class="lv sunken" style="max-height:none"><table><thead><tr><th class="raised">Category</th><th class="raised num">Budget</th><th class="raised num">Spent</th><th class="raised num">Left</th><th class="raised">Used</th><th class="raised">Status</th></tr></thead>
         <tbody>${budgets.length ? budgets.map(brow).join('') : `<tr class="empty"><td colspan="6">No budgets yet. Set them in Categories &amp; budgets.</td></tr>`}</tbody></table></div>
@@ -566,9 +659,9 @@ const VIEWS = {
     return head('Fixed expenses', `Recurring bills. Post them to the register each month with one click.`, 'fixed') + `
       <div class="btnrow"><button class="btn raised" data-act="new-fixed">New fixed expense…</button><button class="btn raised" data-act="edit-sel">Edit…</button><button class="btn raised" data-act="delete-sel">Delete</button>
         <button class="btn raised default" data-act="post-fixed" ${nDue ? '' : 'disabled'}>Post ${nDue} due to ${mLabel(m)}</button></div>
-      <div class="lv sunken"><table><thead><tr><th class="raised num">Day</th><th class="raised">Name</th><th class="raised">Category</th><th class="raised">Paid by</th><th class="raised num">Amount</th><th class="raised">${mShort(m)} status</th></tr></thead><tbody>
-      ${list.length ? list.map(f => `<tr data-kind="fixed" data-id="${f.id}" class="${ui.sel?.id === f.id ? 'sel' : ''}"><td class="num">${f.day}</td><td>${esc(f.name)}</td><td>${esc(catName(f.cat))}</td><td>${esc(f.paidBy)}</td><td class="num">${money(f.amount)}</td><td>${lbl[fixedStatus(f, m)]}</td></tr>`).join('') : '<tr class="empty"><td colspan="6">No fixed expenses yet. Add rent, utilities, insurance and subscriptions here.</td></tr>'}
-      </tbody><tfoot><tr><td></td><td colspan="3">Monthly total (active)</td><td class="num">${money(tot)}</td><td>${money(tot * 12)} / year</td></tr></tfoot></table></div>
+      <div class="lv sunken"><table><thead><tr><th class="raised num">Day</th><th class="raised">Name</th><th class="raised">Category</th><th class="raised">Paid by</th><th class="raised">Paid with</th><th class="raised num">Amount</th><th class="raised">${mShort(m)} status</th></tr></thead><tbody>
+      ${list.length ? list.map(f => `<tr data-kind="fixed" data-id="${f.id}" class="${ui.sel?.id === f.id ? 'sel' : ''}"><td class="num">${f.day}</td><td>${esc(f.name)}</td><td>${esc(catName(f.cat))}</td><td>${esc(f.paidBy)}</td><td>${methodLabel(f.method)}</td><td class="num">${money(f.amount)}</td><td>${lbl[fixedStatus(f, m)]}</td></tr>`).join('') : '<tr class="empty"><td colspan="7">No fixed expenses yet. Add rent, utilities, insurance and subscriptions here.</td></tr>'}
+      </tbody><tfoot><tr><td></td><td colspan="4">Monthly total (active)</td><td class="num">${money(tot)}</td><td>${money(tot * 12)} / year</td></tr></tfoot></table></div>
       <p class="mute" style="margin:0">Variable bills such as electricity post at the usual amount. Edit the entry in the register when the real bill arrives.</p>`;
   },
   reports() {
@@ -602,6 +695,37 @@ const VIEWS = {
         <label>Budget € <input class="inp" id="nc-budget" type="number" min="0" step="10" style="width:90px"></label>
         <button class="btn raised">Add</button></form></fieldset>`;
   },
+  cards() {
+    const cards = S.accounts.filter(a => a.kind === 'credit'), today = todayStr();
+    const sLbl = { open: '<span class="pill mute">Open</span>', due: '<span class="pill warn">To pay</span>', overdue: '<span class="pill neg">Overdue</span>', paid: '<span class="pill pos">Paid</span>' };
+    const block = c => {
+      const sts = cardStatements(c), owed = sts.reduce((a, s) => a + s.open, 0), lim = c.limit || 0, pct = lim ? owed / lim : 0;
+      const nextClose = stmtClose(c, today), nextDue = stmtDue(c, nextClose);
+      const row = s => {
+        const pay = S.cardPayments.filter(p => p.card === c.id && p.close === s.close).pop();
+        const btn = s.state === 'paid' ? (pay ? `<button class="btn sm raised" data-act="undo-stmt" data-id="${pay.id}">Undo</button>` : '')
+          : `<button class="btn sm raised" data-act="pay-stmt" data-card="${c.id}" data-close="${s.close}">${s.state === 'open' ? 'Pay early…' : 'Pay…'}</button>`;
+        return `<tr><td>${dFmt(s.close)}</td><td>${dFmt(s.due)}</td><td class="num">${s.tx.length}</td><td class="num">${money(s.total)}</td><td class="num">${s.open > 0.005 ? money(s.open) : '–'}</td>
+          <td>${sLbl[s.state]}${pay && s.state === 'paid' ? ` <span class="mute">on ${dFmt(pay.date)}</span>` : ''}</td><td>${btn}</td></tr>`;
+      };
+      return `<fieldset><legend><span class="tdesc">${ico('card')}${esc(c.name)}${c.last4 ? ' •••• ' + esc(c.last4) : ''}</span></legend>
+        <div class="cardhead"><table class="kv"><tr><td>Balance owed</td><td class="num neg">${money(owed)}</td></tr><tr><td>Credit limit</td><td class="num">${lim ? money(lim) : '–'}</td></tr><tr class="total"><td>Available</td><td class="num">${lim ? money(lim - owed) : '–'}</td></tr></table>
+        <div><table class="kv"><tr><td>Current statement closes</td><td class="num">${dFmt(nextClose)}</td></tr><tr><td>Payment due</td><td class="num">${dFmt(nextDue)}</td></tr></table>
+        ${lim ? `<div class="pbar sunken" style="margin-top:8px" role="img" aria-label="${Math.round(pct * 100)}% of limit used"><div class="fill ${pct > 1 ? 'over' : pct > .8 ? 'warn' : ''}" style="width:${Math.min(100, pct * 100)}%"></div></div><div class="mute" style="font-size:11px;margin-top:2px">${Math.round(pct * 100)}% of the limit in use</div>` : ''}</div></div>
+        <div class="lv sunken" style="max-height:none"><table><thead><tr><th class="raised">Statement closes</th><th class="raised">Payment due</th><th class="raised num">Charges</th><th class="raised num">Total</th><th class="raised num">Unpaid</th><th class="raised">Status</th><th class="raised"></th></tr></thead><tbody>
+        ${sts.length ? sts.slice(0, 6).map(row).join('') : '<tr class="empty"><td colspan="7">No charges on this card yet. Choose it under Paid with when you add an expense.</td></tr>'}
+        </tbody></table></div></fieldset>`;
+    };
+    const used = id => S.tx.filter(t => t.method === id).length + S.fixed.filter(f => f.method === id).length;
+    return head('Cards & accounts', 'What you owe on each credit card, when it is due, and the ways you pay.', 'card') +
+      (cards.length ? cards.map(block).join('') : '<div class="infobar"><span class="i" aria-hidden="true">i</span><span>No credit cards yet. Click <b>Add payment method</b> and choose Credit card to track statements and due dates.</span></div>') +
+      `<fieldset><legend>Payment methods</legend><div class="btnrow" style="margin-bottom:8px"><button class="btn raised" data-act="new-acct">Add payment method…</button></div>
+        <div class="lv sunken" style="max-height:none"><table><thead><tr><th class="raised">Name</th><th class="raised">Type</th><th class="raised">Card no.</th><th class="raised num">Limit</th><th class="raised num">Closes on</th><th class="raised num">Due on</th><th class="raised num">Entries</th><th class="raised"></th></tr></thead><tbody>
+        ${S.accounts.map(a => `<tr><td><span class="tdesc">${acctIco(a)}${esc(a.name)}</span></td><td>${METHOD_KINDS[a.kind]}</td><td>${a.last4 ? '•••• ' + esc(a.last4) : '–'}</td>
+          <td class="num">${a.kind === 'credit' && a.limit ? money(a.limit) : '–'}</td><td class="num">${a.kind === 'credit' ? 'day ' + a.closingDay : '–'}</td><td class="num">${a.kind === 'credit' ? 'day ' + a.dueDay : '–'}</td>
+          <td class="num">${used(a.id)}</td><td style="white-space:nowrap"><button class="btn sm raised" data-act="edit-acct" data-id="${a.id}">Edit…</button> <button class="btn sm raised" data-act="del-acct" data-id="${a.id}">Delete</button></td></tr>`).join('')}
+        </tbody></table></div><p class="mute" style="margin:8px 0 0">Store only the last four digits of a card. Clarity never needs the full number.</p></fieldset>`;
+  },
   household() {
     const m = ui.month, mem = S.members;
     const exp = S.tx.filter(t => inMonth(t, m) && !isInc(t));
@@ -633,6 +757,8 @@ function regShell() {
       ${ui.lock ? '' : `<label>Type <select class="inp" id="flt-type"><option value="">All types</option>${Object.entries(TYPES).map(([k, v]) => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`}
       <label>Category <select class="inp" id="flt-cat"><option value="">All categories</option>${cats.map(c => `<option value="${c.id}" ${f.cat === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
       <label>Find <input class="inp" id="flt-q" type="search" value="${esc(f.q)}" placeholder="description, store, note" style="width:170px"></label>
+      <label>Status <select class="inp" id="flt-status"><option value="">All</option><option value="open" ${f.status === 'open' ? 'selected' : ''}>Not yet paid / received</option><option value="done" ${f.status === 'done' ? 'selected' : ''}>Paid / received</option></select></label>
+      <label>Paid with <select class="inp" id="flt-method"><option value="">Any</option>${S.accounts.map(a => `<option value="${a.id}" ${f.method === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
       <label><input type="checkbox" id="flt-all" ${f.all ? 'checked' : ''}> All months</label>
     </div>
     <div class="btnrow"><button class="btn raised" data-act="new-entry" ${ui.lock ? `data-type="${ui.lock}"` : ''}>New…</button><button class="btn raised" data-act="edit-sel">Edit…</button><button class="btn raised" data-act="delete-sel">Delete</button></div>
@@ -640,23 +766,23 @@ function regShell() {
 }
 function regRows() {
   const f = ui.filter, q = f.q.trim().toLowerCase(), k = ui.sort.key, d = ui.sort.dir;
-  const rows = S.tx.filter(t => (f.all || inMonth(t, ui.month)) && (ui.lock ? t.type === ui.lock : (!f.type || t.type === f.type)) && (!f.cat || t.cat === f.cat) &&
+  const rows = S.tx.filter(t => (f.all || inMonth(t, ui.month)) && (ui.lock ? t.type === ui.lock : (!f.type || t.type === f.type)) && (!f.cat || t.cat === f.cat) && (!f.method || t.method === f.method) && (!f.status || (f.status === 'done') === ['paid', 'received'].includes(txState(t))) &&
     (!q || `${t.desc} ${t.store || ''} ${t.note || ''} ${t.paidBy}`.toLowerCase().includes(q)));
-  const val = t => k === 'amount' ? (isInc(t) ? t.amount : -t.amount) : k === 'cat' ? catName(t.cat) : String(t[k] ?? '');
+  const val = t => k === 'amount' ? (isInc(t) ? t.amount : -t.amount) : k === 'cat' ? catName(t.cat) : k === 'method' ? (acct(t.method)?.name || '') : k === 'status' ? STATE[txState(t)][0] : String(t[k] ?? '');
   return rows.sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'number' ? x - y : x.localeCompare(y)) * d || b.date.localeCompare(a.date); });
 }
 function regList() { const el = $('#reg-list'); if (el) el.innerHTML = txTable(regRows(), { sortable: true }); }
 function txTable(rows, { sortable = false, compact = false } = {}) {
   const cols = compact ? [['date', 'Date'], ['desc', 'Description'], ['amount', 'Amount', 'num']]
-    : [['date', 'Date'], ['desc', 'Description'], ['type', 'Type'], ['cat', 'Category'], ['paidBy', 'Paid by'], ['amount', 'Amount', 'num']];
+    : [['date', 'Date'], ['desc', 'Description'], ['type', 'Type'], ['cat', 'Category'], ['paidBy', 'Paid by'], ['method', 'Paid with'], ['amount', 'Amount', 'num'], ['status', 'Status']];
   const th = ([k, l, c]) => `<th class="raised ${c || ''}" ${sortable ? `data-sort="${k}" title="Sort by ${l.toLowerCase()}"` : ''}>${l}${sortable && ui.sort.key === k ? `<span class="sortmark">${ui.sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`;
   const amt = t => `<span class="${isInc(t) ? 'pos' : ''}">${isInc(t) ? '+' : '−'}${money(t.amount)}</span>`;
   const extra = t => t.type === 'groceries' && t.store ? ` <span class="mute">· ${esc(t.store)}</span>` : t.type === 'fuel' && t.liters ? ` <span class="mute">· ${t.liters.toFixed(1)} L</span>` : '';
-  const tr = t => `<tr data-kind="tx" data-id="${t.id}" class="${ui.sel?.id === t.id ? 'sel' : ''}"><td>${dFmt(t.date)}</td><td class="wrap">${compact ? `<span class="tdesc">${ico(t.type)}<span>${esc(t.desc)}${extra(t)}</span></span>` : esc(t.desc) + extra(t)}</td>${compact ? '' : `<td><span class="tag ${t.type}">${ico(t.type)}${TYPES[t.type]}</span></td><td>${esc(catName(t.cat))}</td><td>${esc(t.paidBy)}</td>`}<td class="num">${amt(t)}</td></tr>`;
+  const tr = t => `<tr data-kind="tx" data-id="${t.id}" class="${ui.sel?.id === t.id ? 'sel' : ''}"><td>${dFmt(t.date)}</td><td class="wrap">${compact ? `<span class="tdesc">${ico(t.type)}<span>${esc(t.desc)}${extra(t)}</span></span>` : esc(t.desc) + extra(t)}</td>${compact ? '' : `<td><span class="tag ${t.type}">${ico(t.type)}${TYPES[t.type]}</span></td><td>${esc(catName(t.cat))}</td><td>${esc(t.paidBy)}</td><td>${methodLabel(t.method)}</td>`}<td class="num">${amt(t)}</td>${compact ? '' : `<td>${statusCell(t)}</td>`}</tr>`;
   const out = rows.filter(t => !isInc(t)).reduce((a, t) => a + t.amount, 0), inc = rows.filter(isInc).reduce((a, t) => a + t.amount, 0);
   return `<div class="lv sunken" ${compact ? 'style="max-height:none"' : ''}><table ${compact ? 'style="min-width:0"' : ''}><thead><tr>${cols.map(th).join('')}</tr></thead><tbody>
     ${rows.length ? rows.map(tr).join('') : `<tr class="empty"><td colspan="${cols.length}">No entries match. Press Ins or click New to add one.</td></tr>`}</tbody>
-    ${compact || !rows.length ? '' : `<tfoot><tr><td colspan="${cols.length - 1}">${rows.length} entries · out ${money(out)}${inc ? ` · in ${money(inc)}` : ''}</td><td class="num">${money(inc - out)}</td></tr></tfoot>`}</table></div>`;
+    ${compact || !rows.length ? '' : `<tfoot><tr><td colspan="${cols.length - 2}">${rows.length} entries · out ${money(out)}${inc ? ` · in ${money(inc)}` : ''}</td><td class="num">${money(inc - out)}</td><td></td></tr></tfoot>`}</table></div>`;
 }
 
 function render() {
@@ -670,7 +796,8 @@ function render() {
   regList();
   c.scrollTop = st;
   const ms = monthStats(ui.month);
-  $('#sb1').textContent = `${ms.tx.length} entries in ${mShort(ui.month)}`;
+  const nPay = openItems().filter(o => o.s !== 'expected').length;
+  $('#sb1').textContent = `${ms.tx.length} entries in ${mShort(ui.month)} · ${nPay} to pay`;
   $('#sb2').innerHTML = `Balance: <span class="${ms.bal < 0 ? 'neg' : 'pos'}">${money(ms.bal)}</span>`;
   if (!$('#sb3').dataset.msg) $('#sb3').textContent = savedAt ? `Saved ${pad(savedAt.getHours())}:${pad(savedAt.getMinutes())}` : 'Ins new entry · Del delete · F1 help';
 }
@@ -701,7 +828,7 @@ const catOpts = (kind, sel) => S.categories.filter(c => c.kind === kind).map(c =
 
 function entryDialog(t, presetType) {
   const isNew = !t;
-  t = t || { date: inMonth({ date: todayStr() }, ui.month) ? todayStr() : `${ui.month}-01`, type: presetType || 'daily', desc: '', amount: '', cat: DEFAULT_CAT[presetType || 'daily'], paidBy: S.members[0], note: '' };
+  t = t || { date: inMonth({ date: todayStr() }, ui.month) ? todayStr() : `${ui.month}-01`, type: presetType || 'daily', desc: '', amount: '', cat: DEFAULT_CAT[presetType || 'daily'], paidBy: S.members[0], method: (S.accounts.find(a => a.kind === 'debit') || S.accounts[0])?.id || '', cleared: true, note: '' };
   const kind = ty => ty === 'income' ? 'income' : 'expense';
   dialog(isNew ? 'New entry' : 'Edit entry', `<div class="form">
       <label for="f-date">Date:</label><input class="inp" id="f-date" type="date" value="${t.date}" required>
@@ -710,6 +837,8 @@ function entryDialog(t, presetType) {
       <label for="f-amount">Amount (€):</label><input class="inp num" id="f-amount" type="number" step="0.01" min="0" inputmode="decimal" value="${t.amount}">
       <label for="f-cat">Category:</label><select class="inp" id="f-cat">${catOpts(kind(t.type), t.cat)}</select>
       <label for="f-paid" id="f-paid-l">${t.type === 'income' ? 'Received by:' : 'Paid by:'}</label><select class="inp" id="f-paid">${memberOpts(t.paidBy)}</select>
+      <label for="f-method" id="f-method-l">Paid with:</label><select class="inp" id="f-method">${methodOpts(t.method)}</select>
+      <span></span><span><label id="f-clear-w"><input type="checkbox" id="f-clear" ${t.cleared !== false ? 'checked' : ''}> <span id="f-clear-l">Already paid</span></label><span class="mute" id="f-card-hint" hidden>Paid when you settle the card statement.</span></span>
       <div class="row" id="r-store" ${t.type === 'groceries' ? '' : 'hidden'}><label for="f-store">Store:</label><input class="inp" id="f-store" value="${esc(t.store || '')}" maxlength="40" list="stores"></div>
       <div class="row" id="r-fuel" ${t.type === 'fuel' ? '' : 'hidden'}><label for="f-liters">Litres:</label><input class="inp num" id="f-liters" type="number" step="0.01" min="0" value="${t.liters ?? ''}">
         <label for="f-odo">Odometer (km):</label><input class="inp num" id="f-odo" type="number" step="1" min="0" value="${t.odometer ?? ''}"><span class="hint" id="f-ppl"></span></div>
@@ -719,7 +848,8 @@ function entryDialog(t, presetType) {
       const g = id => $('#' + id).value.trim(), type = g('f-type'), amount = parseFloat(g('f-amount'));
       if (!/^\d{4}-\d{2}-\d{2}$/.test(g('f-date'))) return dlgErr('Enter a date.');
       if (!(amount > 0)) return dlgErr('Enter an amount greater than zero.');
-      const rec = { ...t, id: t.id || uid(), date: g('f-date'), type, desc: g('f-desc') || TYPES[type], amount: r2(amount), cat: g('f-cat'), paidBy: g('f-paid'), note: g('f-note') };
+      const rec = { ...t, id: t.id || uid(), date: g('f-date'), type, desc: g('f-desc') || TYPES[type], amount: r2(amount), cat: g('f-cat'), paidBy: g('f-paid'), method: g('f-method'), cleared: $('#f-clear').checked, note: g('f-note') };
+      if (rec.method !== t.method || type === 'income') delete rec.settled;
       delete rec.store; delete rec.liters; delete rec.odometer;
       if (type === 'groceries' && g('f-store')) rec.store = g('f-store');
       if (type === 'fuel') { const l = parseFloat(g('f-liters')), o = parseInt(g('f-odo'), 10); if (l > 0) rec.liters = l; if (o > 0) rec.odometer = o; }
@@ -735,11 +865,15 @@ function entryDialog(t, presetType) {
     if (cat(sel.value)?.kind !== k || !sel.options.length) { sel.innerHTML = catOpts(k, DEFAULT_CAT[ty]); }
     $('#r-store').hidden = ty !== 'groceries'; $('#r-fuel').hidden = ty !== 'fuel';
     $('#f-type-ico').innerHTML = ico(ty);
+    const card = ty !== 'income' && acct($('#f-method').value)?.kind === 'credit';
+    $('#f-clear-w').hidden = card; $('#f-card-hint').hidden = !card;
+    $('#f-clear-l').textContent = ty === 'income' ? 'Already received' : 'Already paid';
+    $('#f-method-l').textContent = ty === 'income' ? 'Received into:' : 'Paid with:';
     $('#f-paid-l').textContent = ty === 'income' ? 'Received by:' : 'Paid by:';
   };
   const ppl = () => { const a = parseFloat($('#f-amount').value), l = parseFloat($('#f-liters').value); $('#f-ppl').textContent = a > 0 && l > 0 ? `Price: €${(a / l).toFixed(3)} per litre` : 'Fill to a full tank so consumption can be calculated.'; };
   $('#f-type').addEventListener('change', () => { const ty = $('#f-type').value; $('#f-cat').innerHTML = catOpts(kind(ty), DEFAULT_CAT[ty]); syncType(); });
-  $('#f-amount').addEventListener('input', ppl); $('#f-liters').addEventListener('input', ppl); ppl(); syncType();
+  $('#f-method').addEventListener('change', syncType); $('#f-amount').addEventListener('input', ppl); $('#f-liters').addEventListener('input', ppl); ppl(); syncType();
 }
 
 function fixedDialog(f) {
@@ -752,6 +886,7 @@ function fixedDialog(f) {
       <span class="hint">Day 31 posts on the last day of shorter months.</span>
       <label for="x-cat">Category:</label><select class="inp" id="x-cat">${catOpts('expense', f.cat)}</select>
       <label for="x-paid">Paid by:</label><select class="inp" id="x-paid">${memberOpts(f.paidBy)}</select>
+      <label for="x-method">Paid with:</label><select class="inp" id="x-method">${methodOpts(f.method)}</select>
       <span></span><label><input type="checkbox" id="x-active" ${f.active ? 'checked' : ''}> Active (uncheck to pause)</label>
     </div>`, {
     onSubmit() {
@@ -759,7 +894,7 @@ function fixedDialog(f) {
       if (!name) return dlgErr('Enter a name.');
       if (!(amount > 0)) return dlgErr('Enter an amount greater than zero.');
       if (!(day >= 1 && day <= 31)) return dlgErr('Day must be between 1 and 31.');
-      const rec = { ...f, id: f.id || uid(), name, amount: r2(amount), day, cat: $('#x-cat').value, paidBy: $('#x-paid').value, active: $('#x-active').checked };
+      const rec = { ...f, id: f.id || uid(), name, amount: r2(amount), day, cat: $('#x-cat').value, paidBy: $('#x-paid').value, method: $('#x-method').value, active: $('#x-active').checked };
       if (isNew) S.fixed.push(rec); else S.fixed[S.fixed.findIndex(x => x.id === f.id)] = rec;
       ui.sel = { kind: 'fixed', id: rec.id };
       commit(isNew ? `Added fixed expense ${name}` : 'Fixed expense updated'); return true;
@@ -767,10 +902,56 @@ function fixedDialog(f) {
   });
 }
 
+function payStmtDialog(cardId, close) {
+  const card = acct(cardId), st = card && cardStatements(card).find(s => s.close === close);
+  if (!st) return;
+  dialog(`Pay ${card.name} statement`, `<div class="form">
+      <span>Statement:</span><span>closes ${dFmt(st.close)}, due ${dFmt(st.due)}</span>
+      <span>Charges:</span><span>${st.tx.filter(t => !t.settled).length} unpaid</span>
+      <span>Amount:</span><b>${money(st.open)}</b>
+      <label for="p-date">Payment date:</label><input class="inp" id="p-date" type="date" value="${todayStr()}">
+      <label for="p-from">Paid from:</label><select class="inp" id="p-from">${S.accounts.filter(a => a.kind !== 'credit').map(a => `<option value="${a.id}" ${a.kind === 'bank' ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select>
+    </div><p class="mute" style="margin:0">The charges were counted as expenses when you made them, so this payment is not counted again.</p>`, {
+    ok: 'Record payment', onSubmit() {
+      const d = $('#p-date').value; if (!d) return dlgErr('Enter the payment date.');
+      const amt = st.open; settleStatement(S, card, st, d, $('#p-from').value);
+      commit(`Paid ${card.name} statement: ${money(amt)}`); return true;
+    }
+  });
+}
+function acctDialog(a) {
+  const isNew = !a;
+  a = a || { name: '', kind: 'credit', last4: '', limit: '', closingDay: 25, dueDay: 15 };
+  dialog(isNew ? 'Add payment method' : 'Edit payment method', `<div class="form">
+      <label for="a-name">Name:</label><input class="inp" id="a-name" value="${esc(a.name)}" maxlength="40" placeholder="e.g. Visa Gold">
+      <label for="a-kind">Type:</label><select class="inp" id="a-kind">${Object.entries(METHOD_KINDS).map(([k, v]) => `<option value="${k}" ${a.kind === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <div class="row" id="a-cardno"><label for="a-last4">Last 4 digits:</label><input class="inp" id="a-last4" value="${esc(a.last4 || '')}" maxlength="4" inputmode="numeric" placeholder="1234"></div>
+      <div class="row" id="a-credit"><label for="a-limit">Credit limit (€):</label><input class="inp num" id="a-limit" type="number" min="0" step="50" value="${a.limit ?? ''}">
+        <label for="a-close">Statement closes on day:</label><input class="inp num" id="a-close" type="number" min="1" max="31" value="${a.closingDay ?? 25}">
+        <label for="a-due">Payment due on day:</label><input class="inp num" id="a-due" type="number" min="1" max="31" value="${a.dueDay ?? 15}">
+        <span class="hint">When the due day is earlier than the closing day, payment falls in the following month.</span></div>
+    </div>`, {
+    onSubmit() {
+      const name = $('#a-name').value.trim(), kind = $('#a-kind').value, last4 = $('#a-last4').value.trim();
+      if (!name) return dlgErr('Enter a name.');
+      if (last4 && !/^\d{4}$/.test(last4)) return dlgErr('Enter exactly four digits, or leave the card number empty.');
+      const rec = { ...a, id: a.id || uid(), name, kind, last4: kind === 'credit' || kind === 'debit' ? last4 : '' };
+      if (kind === 'credit') {
+        const c = parseInt($('#a-close').value, 10), d = parseInt($('#a-due').value, 10);
+        if (!(c >= 1 && c <= 31) || !(d >= 1 && d <= 31)) return dlgErr('Closing and due days must be between 1 and 31.');
+        Object.assign(rec, { limit: Math.max(0, parseFloat($('#a-limit').value) || 0), closingDay: c, dueDay: d });
+      } else { delete rec.limit; delete rec.closingDay; delete rec.dueDay; }
+      if (isNew) S.accounts.push(rec); else S.accounts[S.accounts.findIndex(x => x.id === a.id)] = rec;
+      commit(isNew ? `Added ${name}` : `Saved ${name}`); return true;
+    }
+  });
+  const sync = () => { const k = $('#a-kind').value; $('#a-credit').hidden = k !== 'credit'; $('#a-cardno').hidden = !(k === 'credit' || k === 'debit'); };
+  $('#a-kind').addEventListener('change', sync); sync();
+}
 function postFixed() {
   const m = ui.month, due = S.fixed.filter(f => fixedStatus(f, m) === 'due');
   if (!due.length) { msgBox('Post fixed expenses', `Nothing is due for ${mLabel(m)}. Items already posted, paused, or scheduled for later this month are skipped.`); return; }
-  for (const f of due) S.tx.push({ id: uid(), date: `${m}-${pad(Math.min(f.day, dim(m)))}`, type: 'fixed', desc: f.name, amount: f.amount, cat: f.cat, paidBy: f.paidBy, fixedId: f.id, note: '' });
+  for (const f of due) S.tx.push({ id: uid(), date: `${m}-${pad(Math.min(f.day, dim(m)))}`, type: 'fixed', desc: f.name, amount: f.amount, cat: f.cat, paidBy: f.paidBy, method: f.method || '', cleared: false, fixedId: f.id, note: '' });
   commit(`Posted ${due.length} fixed expense${due.length > 1 ? 's' : ''} (${money(due.reduce((a, f) => a + f.amount, 0))}) to ${mLabel(m)}`);
 }
 
@@ -793,8 +974,8 @@ function deleteSel() {
 
 function csv() {
   const q = v => { const s = String(v ?? ''); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const rows = S.tx.slice().sort((a, b) => a.date.localeCompare(b.date)).map(t => [t.date, TYPES[t.type], catName(t.cat), t.desc, (isInc(t) ? '' : '-') + t.amount.toFixed(2), t.paidBy, t.store, t.liters, t.odometer, t.note].map(q).join(','));
-  return ['Date,Type,Category,Description,Amount,Paid by,Store,Litres,Odometer,Note', ...rows].join('\n');
+  const rows = S.tx.slice().sort((a, b) => a.date.localeCompare(b.date)).map(t => [t.date, TYPES[t.type], catName(t.cat), t.desc, (isInc(t) ? '' : '-') + t.amount.toFixed(2), t.paidBy, acct(t.method)?.name, STATE[txState(t)][0], t.store, t.liters, t.odometer, t.note].map(q).join(','));
+  return ['Date,Type,Category,Description,Amount,Paid by,Paid with,Status,Store,Litres,Odometer,Note', ...rows].join('\n');
 }
 function textDialog(title, intro, text, fileName) {
   const saveBtn = DESK ? `<button class="btn raised" type="button" data-act="save-text" data-name="${esc(fileName)}">Save as file…</button>` : '';
@@ -802,7 +983,7 @@ function textDialog(title, intro, text, fileName) {
 }
 
 const actions = {
-  'go': el => { ui.view = el.dataset.view; ui.sel = null; ui.filter = { type: '', cat: '', q: '', all: false }; render(); $('#content').scrollTop = 0; },
+  'go': el => { ui.view = el.dataset.view; ui.sel = null; ui.filter = { type: '', cat: '', q: '', all: false, status: '', method: '' }; render(); $('#content').scrollTop = 0; },
   'new-entry': el => entryDialog(null, el?.dataset?.type || (ui.view === 'fuel' ? 'fuel' : ui.lock || undefined)),
   'new-fixed': () => fixedDialog(null),
   'edit-sel': editSel, 'delete-sel': deleteSel, 'post-fixed': postFixed,
@@ -817,7 +998,7 @@ const actions = {
   'restore': () => dialog('Restore from backup', `<p style="margin:0">${DESK ? 'Open a backup file, or paste' : 'Paste'} a backup made with File › Back up ledger. It replaces everything currently in Clarity.</p>${DESK ? '<div class="btnrow"><button class="btn raised" type="button" data-act="open-backup">Open backup file…</button></div>' : ''}<textarea class="inp" id="rs-text" placeholder="Paste backup here"></textarea>`, {
     ok: 'Restore', wide: true, onSubmit() {
       try { const d = JSON.parse($('#rs-text').value); if (!d || !Array.isArray(d.tx) || !Array.isArray(d.categories) || !Array.isArray(d.members)) throw 0;
-        S = { fixed: [], ...d }; ui.sel = null; commit(`Restored ${S.tx.length} entries`); return true; }
+        S = migrate({ fixed: [], ...d }); ui.sel = null; commit(`Restored ${S.tx.length} entries`); return true; }
       catch (e) { return dlgErr('That text is not a Clarity backup. Copy the whole backup, including the first { and last }.'); }
     } }),
   'load-sample': () => msgBox('Load sample data', 'Replace your ledger with the sample household? Your current entries will be lost unless you back them up first.', { ok: 'Load sample', cancel: 'Cancel', warn: true, onOk() { S = sampleLedger(); ui.sel = null; commit('Sample data loaded'); } }),
@@ -825,8 +1006,26 @@ const actions = {
   'about': () => msgBox('About Clarity', `<b>Clarity ${esc(DESK?.version || '1.0')}</b><br>Household accounts, the straightforward way.<br><br>${DESK
     ? `Your ledger is saved in:<br><code style="word-break:break-all">${esc(DESK.dataPath)}</code><br>A daily backup copy is kept in the <i>backups</i> folder next to it.`
     : 'Your ledger is stored in this browser only. Use File › Back up ledger to keep a copy.'}`),
-  'shortcuts': () => msgBox('Keyboard shortcuts', `<table class="kv"><tr><td>Ins</td><td>New entry</td></tr><tr><td>Enter</td><td>Edit selected row</td></tr><tr><td>Del</td><td>Delete selected row</td></tr><tr><td>↑ / ↓</td><td>Move selection</td></tr><tr><td>PgUp / PgDn</td><td>Previous / next month</td></tr><tr><td>F9</td><td>Post due fixed expenses</td></tr><tr><td>Alt+F, E, V, T, H</td><td>Open menus</td></tr><tr><td>F1</td><td>About</td></tr></table>`),
+  'shortcuts': () => msgBox('Keyboard shortcuts', `<table class="kv"><tr><td>Ins</td><td>New entry</td></tr><tr><td>Enter</td><td>Edit selected row</td></tr><tr><td>Del</td><td>Delete selected row</td></tr><tr><td>Space</td><td>Mark selected entry paid / received</td></tr><tr><td>↑ / ↓</td><td>Move selection</td></tr><tr><td>PgUp / PgDn</td><td>Previous / next month</td></tr><tr><td>F9</td><td>Post due fixed expenses</td></tr><tr><td>Alt+F, E, V, T, H</td><td>Open menus</td></tr><tr><td>F1</td><td>About</td></tr></table>`),
   'dlg-close': closeDialog,
+  'toggle-clear': el => {
+    const t = S.tx.find(x => x.id === el.dataset.id); if (!t) return;
+    if (isCard(t) && !isInc(t)) return status('Card charges are marked paid when you pay the card statement (Cards & accounts).');
+    t.cleared = !t.cleared; ui.sel = { kind: 'tx', id: t.id }; commit(`${t.desc}: ${STATE[txState(t)][0].toLowerCase()}`);
+  },
+  'pay-stmt': el => payStmtDialog(el.dataset.card, el.dataset.close),
+  'undo-stmt': el => {
+    const p = S.cardPayments.find(x => x.id === el.dataset.id); if (!p) return;
+    msgBox('Undo card payment', `Undo the payment of ${money(p.amount)} made on ${dFmt(p.date)}? The charges go back to unpaid.`, { ok: 'Undo payment', cancel: 'Cancel', warn: true,
+      onOk() { S.tx.forEach(t => { if (t.settled === p.id) delete t.settled; }); S.cardPayments = S.cardPayments.filter(x => x.id !== p.id); commit('Card payment undone'); } });
+  },
+  'new-acct': () => acctDialog(null),
+  'edit-acct': el => acctDialog(acct(el.dataset.id)),
+  'del-acct': el => {
+    const a = acct(el.dataset.id), n = S.tx.filter(t => t.method === a.id).length + S.fixed.filter(f => f.method === a.id).length;
+    if (n) return msgBox('Payment method in use', `<b>${esc(a.name)}</b> is used by ${n} entries. Rename it instead, or change those entries first.`);
+    S.accounts = S.accounts.filter(x => x.id !== a.id); commit(`Deleted ${a.name}`);
+  },
   'copy-text': () => { const ta = $('#dlg-text'); navigator.clipboard?.writeText(ta.value).then(() => status('Copied to clipboard')).catch(() => { ta.select(); status('Text selected. Press Ctrl+C to copy.'); }) ?? (ta.select(), status('Text selected. Press Ctrl+C to copy.')); },
   'del-cat': el => {
     const id = el.dataset.id, c = cat(id), n = S.tx.filter(t => t.cat === id).length + S.fixed.filter(f => f.cat === id).length;
@@ -879,6 +1078,8 @@ document.addEventListener('change', e => {
   if (t.id === 'flt-type') { ui.filter.type = t.value; regList(); }
   else if (t.id === 'flt-cat') { ui.filter.cat = t.value; regList(); }
   else if (t.id === 'flt-all') { ui.filter.all = t.checked; regList(); }
+  else if (t.id === 'flt-status') { ui.filter.status = t.value; regList(); }
+  else if (t.id === 'flt-method') { ui.filter.method = t.value; regList(); }
   else if (t.dataset.cat) {
     const c = cat(t.dataset.cat); if (!c) return;
     if (t.dataset.field === 'name') { const v = t.value.trim(); if (!v) { t.value = c.name; return; } c.name = v; }
@@ -906,7 +1107,8 @@ document.addEventListener('keydown', e => {
   if (typing) return;
   if (e.key === 'Insert') { e.preventDefault(); actions['new-entry'](); }
   else if (e.key === 'Delete') { e.preventDefault(); deleteSel(); }
-  else if (e.key === 'Enter' && ui.sel) { e.preventDefault(); editSel(); }
+  else if (e.key === 'Enter' && ui.sel && e.target.tagName !== 'BUTTON') { e.preventDefault(); editSel(); }
+  else if (e.key === ' ' && ui.sel?.kind === 'tx' && e.target.tagName !== 'BUTTON') { e.preventDefault(); actions['toggle-clear']({ dataset: { id: ui.sel.id } }); }
   else if (e.key === 'PageUp') { e.preventDefault(); actions['prev-month'](); }
   else if (e.key === 'PageDown') { e.preventDefault(); actions['next-month'](); }
   else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && ui.sel) {

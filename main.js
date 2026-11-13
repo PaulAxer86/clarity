@@ -97,6 +97,8 @@ function createWindow() {
         };
       })()`);
       result.saved = fs.existsSync(dataFile()) && fs.readdirSync(backupDir()).length === 1;
+      // Optional extra steps (JavaScript run in the page) before the screenshot, e.g. to open a view.
+      if (process.env.CLARITY_SMOKE_STEPS) result.steps = await win.webContents.executeJavaScript(process.env.CLARITY_SMOKE_STEPS);
       if (process.env.CLARITY_SHOT) fs.writeFileSync(process.env.CLARITY_SHOT, (await win.webContents.capturePage()).toPNG());
       console.log('SMOKE', JSON.stringify(result), errors.length ? 'ERRORS ' + JSON.stringify(errors) : 'no errors');
       app.exit(result.desktop && result.views > 0 && result.saved && !errors.length ? 0 : 1);
