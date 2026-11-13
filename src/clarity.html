@@ -147,6 +147,11 @@ legend { padding: 0 4px; }
 .vhead h1 { display: inline-flex; align-items: center; gap: 6px; }
 .typepick { display: flex; align-items: center; gap: 6px; }
 .typepick .inp { flex: 1; }
+.iconpick { display: flex; flex-wrap: wrap; gap: 2px; }
+.iconpick label { display: grid; place-items: center; width: 26px; height: 24px; cursor: default; border: 1px solid transparent; }
+.iconpick input { position: absolute; opacity: 0; width: 0; height: 0; }
+.iconpick label:has(input:checked) { border-color: var(--sh) var(--hi) var(--hi) var(--sh); background: var(--win); }
+.iconpick label:has(input:focus-visible) { outline: 1px dotted var(--ink); }
 .chk { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 0; font-size: 11px; cursor: default; white-space: nowrap; }
 .chk .box { width: 13px; height: 13px; flex: none; display: grid; place-items: center; background: var(--win); box-shadow: inset 1px 1px var(--sh), inset -1px -1px var(--hi), inset 2px 2px var(--dk); color: var(--pos); font: bold 11px/1 var(--ui); }
 .chk.topay { color: var(--neg); } .chk.expected { color: var(--warn); } .chk.oncard, .chk:disabled { color: var(--mute); }
@@ -281,9 +286,10 @@ textarea.inp { width: 100%; height: 200px; font: 11px/1.4 var(--mono); resize: v
     </div>
     <div class="menu"><button class="mbtn" data-menu="tools" aria-expanded="false" aria-haspopup="true"><u>T</u>ools</button>
       <div class="drop raised" id="m-tools" role="menu" hidden>
-        <button class="ditem" data-act="go" data-view="categories"><span>Categories &amp; budgets</span></button>
+        <button class="ditem" data-act="go" data-view="categories"><span>Categories &amp; types</span></button>
         <button class="ditem" data-act="go" data-view="household"><span>Household &amp; settle up</span></button>
         <div class="dsep"></div>
+        <button class="ditem" data-act="new-type"><span>New entry type…</span></button>
         <button class="ditem" data-act="new-cat"><span>New category…</span></button>
         <button class="ditem" data-act="new-acct"><span>New payment method…</span></button>
         <button class="ditem" data-act="new-member"><span>New household member…</span></button>
@@ -336,9 +342,21 @@ const r2 = n => Math.round(n * 100) / 100;
 const pad = n => String(n).padStart(2, '0');
 const uid = () => Math.random().toString(36).slice(2, 10);
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const TYPES = { fixed: 'Fixed', daily: 'Daily', groceries: 'Groceries', fuel: 'Fuel', income: 'Income' };
+// Built-in entry types have special behaviour (fixed posting, store, fuel log). People can add their own types too.
+const BUILTIN_TYPES = {
+  fixed: { name: 'Fixed', kind: 'expense', icon: 'fixed', cat: 'housing' },
+  daily: { name: 'Daily', kind: 'expense', icon: 'daily', cat: 'dining' },
+  groceries: { name: 'Groceries', kind: 'expense', icon: 'groceries', cat: 'groceries' },
+  fuel: { name: 'Fuel', kind: 'expense', icon: 'fuel', cat: 'transport' },
+  income: { name: 'Income', kind: 'income', icon: 'income', cat: 'salary' }
+};
 const EXP_TYPES = ['fixed', 'daily', 'groceries', 'fuel'];
-const DEFAULT_CAT = { fixed: 'housing', daily: 'dining', groceries: 'groceries', fuel: 'transport', income: 'salary' };
+const typeInfo = id => BUILTIN_TYPES[id] ? { id, builtin: true, ...BUILTIN_TYPES[id] } : (S?.types?.find(x => x.id === id) || { id, name: id, kind: 'expense', icon: 'tag' });
+const allTypes = () => [...Object.keys(BUILTIN_TYPES).map(typeInfo), ...(S?.types || [])];
+const typeName = id => typeInfo(id).name;
+const isIncType = id => typeInfo(id).kind === 'income';
+const defCat = id => { const ti = typeInfo(id); return ti.cat && S.categories.some(c => c.id === ti.cat && c.kind === ti.kind) ? ti.cat : S.categories.find(c => c.kind === ti.kind)?.id || ''; };
+const typeOpts = sel => allTypes().map(x => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(x.name)}</option>`).join('') + '<option value="__new">＋ New type…</option>';
 const JOINT = 'Joint account';
 const DESK = window.clarityDesktop || null; // set by the desktop app's preload script
 if (DESK) document.documentElement.classList.add('is-desktop');
@@ -354,9 +372,19 @@ const ICONS = {
   card: svg('<rect x=".5" y="3.5" width="15" height="10" rx="1" fill="#2a5db0" stroke="#0a246a"/><rect x="1" y="5.5" width="14" height="2" fill="#0a246a"/><rect x="2.5" y="9" width="3" height="2" fill="#e8c45a"/><rect x="8" y="10" width="5" height="1" fill="#fff"/>'),
   debit: svg('<rect x=".5" y="3.5" width="15" height="10" rx="1" fill="#3f8f4f" stroke="#2f6b2f"/><rect x="2.5" y="6" width="3" height="2" fill="#e8c45a"/><rect x="2.5" y="10" width="11" height="1" fill="#fff"/>'),
   cash: svg('<rect x=".5" y="4.5" width="15" height="8" fill="#9fd18b" stroke="#2f6b2f"/><circle cx="8" cy="8.5" r="2" fill="#e6f3e6" stroke="#2f6b2f"/>'),
+  tag: svg('<path d="M1.5 8.5v-6h6l7 7-6 6z" fill="#e8c45a" stroke="#8a6d12"/><circle cx="4.5" cy="5.5" r="1.2" fill="#fff" stroke="#8a6d12"/>'),
+  debt: svg('<rect x="2.5" y="1.5" width="9" height="13" fill="#fff" stroke="#404040"/><rect x="4" y="4" width="6" height="1" fill="#808080"/><rect x="4" y="6" width="6" height="1" fill="#808080"/><rect x="4" y="8" width="4" height="1" fill="#808080"/><circle cx="11.5" cy="11.5" r="3.5" fill="#c03030" stroke="#801010"/><rect x="9.5" y="11" width="4" height="1.2" fill="#fff"/>'),
+  house: svg('<rect x="3.5" y="7.5" width="9" height="7" fill="#f3e6d6" stroke="#404040"/><path d="M1 8.5 8 2l7 6.5" fill="none" stroke="#801010" stroke-width="1.6"/><rect x="7" y="10" width="2.5" height="4.5" fill="#7a4a22"/>'),
+  health: svg('<rect x="1.5" y="1.5" width="13" height="13" fill="#fff" stroke="#404040"/><rect x="6.5" y="3.5" width="3" height="9" fill="#c03030"/><rect x="3.5" y="6.5" width="9" height="3" fill="#c03030"/>'),
+  gift: svg('<rect x="2" y="7" width="12" height="7.5" fill="#c03030" stroke="#801010"/><rect x="1" y="4.5" width="14" height="3" fill="#e04848" stroke="#801010"/><rect x="7" y="4.5" width="2" height="10" fill="#e8c45a"/><path d="M8 4.5C6 1 3.5 2.5 5 4.5M8 4.5c2-3.5 4.5-2 3 0" fill="none" stroke="#8a6d12"/>'),
+  car: svg('<path d="M1.5 11.5v-3l2-4h9l2 4v3z" fill="#2a5db0" stroke="#0a246a"/><rect x="4.5" y="5.5" width="7" height="3" fill="#cfe0f5"/><circle cx="4.5" cy="12" r="1.8" fill="#404040"/><circle cx="11.5" cy="12" r="1.8" fill="#404040"/>'),
+  school: svg('<rect x="2.5" y="1.5" width="11" height="13" fill="#3f8f4f" stroke="#2f6b2f"/><rect x="4" y="1.5" width="1" height="13" fill="#2f6b2f"/><rect x="6.5" y="4" width="5" height="2" fill="#fff"/>'),
+  savings: svg('<rect x="2.5" y="8" width="11" height="4" fill="#e8c45a"/><ellipse cx="8" cy="12" rx="5.5" ry="2" fill="#e8c45a" stroke="#8a6d12"/><path d="M2.5 8v4M13.5 8v4" stroke="#8a6d12"/><ellipse cx="8" cy="8" rx="5.5" ry="2" fill="#f5dc84" stroke="#8a6d12"/><ellipse cx="8" cy="4.5" rx="3" ry="1.2" fill="#f5dc84" stroke="#8a6d12"/>'),
+  pet: svg('<circle cx="8" cy="11" r="3.2" fill="#7a4a22"/><circle cx="3.5" cy="7" r="1.6" fill="#7a4a22"/><circle cx="6.3" cy="4.2" r="1.6" fill="#7a4a22"/><circle cx="9.7" cy="4.2" r="1.6" fill="#7a4a22"/><circle cx="12.5" cy="7" r="1.6" fill="#7a4a22"/>'),
   bank: svg('<path d="M1 6 8 2l7 4z" fill="#d4d0c8" stroke="#404040"/><rect x="2.5" y="7" width="2" height="5" fill="#808080"/><rect x="7" y="7" width="2" height="5" fill="#808080"/><rect x="11.5" y="7" width="2" height="5" fill="#808080"/><rect x="1" y="12.5" width="14" height="2" fill="#404040"/>')
 };
-const ico = k => ICONS[k] ? `<span class="ticon" aria-hidden="true">${ICONS[k]}</span>` : '';
+const ico = k => { const key = ICONS[k] ? k : S?.types?.find(x => x.id === k)?.icon || (k ? 'tag' : ''); return ICONS[key] ? `<span class="ticon" aria-hidden="true">${ICONS[key]}</span>` : ''; };
+const ICON_CHOICES = ['tag', 'debt', 'house', 'health', 'gift', 'car', 'school', 'savings', 'pet', 'card', 'bank', 'cash', 'fixed', 'daily', 'groceries', 'fuel', 'income'];
 
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const ymOf = s => s.slice(0, 7);
@@ -379,7 +407,7 @@ function defaultAccounts(sample) {
 }
 // Brings ledgers saved by older versions up to date.
 function migrate(d) {
-  d.fixed ||= []; d.members ||= ['Me']; d.accounts ||= defaultAccounts(false); d.cardPayments ||= [];
+  d.fixed ||= []; d.types ||= []; d.members ||= ['Me']; d.accounts ||= defaultAccounts(false); d.cardPayments ||= [];
   for (const t of d.tx) if (t.cleared === undefined) t.cleared = true;
   d.ver = 2; return d;
 }
@@ -425,14 +453,14 @@ function sampleLedger() {
   const recent = `${d0.getFullYear()}-${pad(d0.getMonth() + 1)}-${pad(d0.getDate())}`;
   for (const t of tx) if (t.type === 'fixed' && t.date > recent && t.method === 'bank') t.cleared = false;
   const accounts = defaultAccounts(true);
-  const L = { ver: 2, sample: true, members: ['Alex', 'Sam'], categories, fixed, tx, accounts, cardPayments: [] };
+  const L = { ver: 2, sample: true, members: ['Alex', 'Sam'], categories, fixed, tx, accounts, cardPayments: [], types: [] };
   for (const card of accounts.filter(a => a.kind === 'credit'))
     for (const st of cardStatements(card, L)) if (st.due < today) settleStatement(L, card, st, st.due, 'bank');
   return L;
 }
 function emptyLedger() {
   const s = sampleLedger();
-  return { ver: 2, sample: false, members: ['Me'], categories: s.categories.map(c => ({ ...c })), fixed: [], tx: [], accounts: defaultAccounts(false), cardPayments: [] };
+  return { ver: 2, sample: false, members: ['Me'], categories: s.categories.map(c => ({ ...c })), fixed: [], tx: [], accounts: defaultAccounts(false), cardPayments: [], types: [] };
 }
 
 /* ---------- Storage ---------- */
@@ -455,7 +483,7 @@ function commit(msg) { save(); render(); if (msg) status(msg); }
 /* ---------- Lookups ---------- */
 const cat = id => S.categories.find(c => c.id === id);
 const catName = id => cat(id)?.name ?? '(none)';
-const isInc = t => t.type === 'income';
+const isInc = t => isIncType(t.type);
 const inMonth = (t, m) => ymOf(t.date) === m;
 const acct = id => S.accounts.find(a => a.id === id);
 const isCard = t => acct(t.method)?.kind === 'credit';
@@ -472,7 +500,7 @@ function stmtDue(card, close) { const m = ymOf(close), dm = card.dueDay > card.c
 function cardStatements(card, L = S) {
   const map = {}, today = todayStr();
   for (const t of L.tx) {
-    if (t.method !== card.id || t.type === 'income') continue;
+    if (t.method !== card.id || isInc(t)) continue;
     const c = stmtClose(card, t.date);
     const st = (map[c] ||= { close: c, due: stmtDue(card, c), tx: [], total: 0, open: 0 });
     st.tx.push(t); st.total += t.amount; if (!t.settled) st.open += t.amount;
@@ -537,13 +565,15 @@ const TREE = [
   { v: 'overview', l: 'Overview' }, { v: 'register', l: 'Register' },
   { l: 'Expenses', kids: [{ v: 'fixed', l: 'Fixed expenses', i: 'fixed' }, { v: 'daily', l: 'Daily spending', i: 'daily' }, { v: 'groceries', l: 'Groceries', i: 'groceries' }, { v: 'fuel', l: 'Fuel log', i: 'fuel' }] },
   { v: 'cards', l: 'Cards & accounts', i: 'card' }, { v: 'reports', l: 'Reports' },
-  { l: 'Setup', kids: [{ v: 'categories', l: 'Categories & budgets' }, { v: 'household', l: 'Household' }] }
+  { l: 'Setup', kids: [{ v: 'categories', l: 'Categories & types' }, { v: 'household', l: 'Household' }] }
 ];
+const treeData = () => TREE.map(n => n.l === 'Expenses'
+  ? { ...n, kids: [...n.kids, ...S.types.filter(x => x.kind === 'expense').map(x => ({ v: 'type:' + x.id, l: x.name, i: x.id }))] } : n);
 function renderTree() {
   const item = n => n.kids
     ? `<li><span class="titem"><span class="fold" aria-hidden="true"></span><span class="tl">${esc(n.l)}</span></span><ul>${n.kids.map(item).join('')}</ul></li>`
     : `<li><button class="titem" data-act="go" data-view="${n.v}" ${ui.view === n.v ? 'aria-current="page"' : ''}>${n.i ? ico(n.i) : '<span class="doc" aria-hidden="true"></span>'}<span class="tl">${esc(n.l)}</span></button></li>`;
-  $('#tree').innerHTML = `<ul><li><span class="titem"><span class="root-ico" aria-hidden="true"></span><span class="tl"><b>${S.sample ? 'Sample ledger' : 'My ledger'}</b></span></span><ul>${TREE.map(item).join('')}</ul></li></ul>`;
+  $('#tree').innerHTML = `<ul><li><span class="titem"><span class="root-ico" aria-hidden="true"></span><span class="tl"><b>${S.sample ? 'Sample ledger' : 'My ledger'}</b></span></span><ul>${treeData().map(item).join('')}</ul></li></ul>`;
 }
 function head(title, sub, icon) { return `<div class="vhead"><h1>${icon ? ico(icon) : ''}${esc(title)}</h1><p>${sub}</p></div>`; }
 function sampleBar() {
@@ -556,7 +586,8 @@ const VIEWS = {
     const fixedTot = st.byType.fixed, varTot = st.exp - fixedTot;
     const rate = st.inc > 0 ? (st.bal / st.inc) * 100 : 0;
     const diff = st.exp - prev.exp;
-    const typeMax = Math.max(1, ...EXP_TYPES.map(k => st.byType[k]));
+    const tlist = [...EXP_TYPES, ...S.types.filter(x => x.kind === 'expense' && st.byType[x.id]).map(x => x.id)];
+    const typeMax = Math.max(1, ...tlist.map(k => st.byType[k] || 0));
     const isCur = m === ymOf(todayStr()), dayFrac = isCur ? Number(todayStr().slice(8)) / dim(m) : 1;
     const budgets = S.categories.filter(c => c.kind === 'expense' && (c.budget > 0 || st.byCat[c.id]));
     const brow = c => {
@@ -607,14 +638,14 @@ const VIEWS = {
           <tr><td>vs. ${mLabel(addM(m, -1))}</td><td class="num ${diff > 0 ? 'neg' : 'pos'}">${diff > 0 ? '+' : ''}${money(diff)} spent</td></tr>
         </table></fieldset>
         <fieldset><legend>Spending by type</legend><div class="hbars">
-          ${EXP_TYPES.map(k => `<span class="tdesc">${ico(k)}${TYPES[k]}</span><div><div class="hb" style="width:${st.byType[k] / typeMax * 100}%;${st.byType[k] ? '' : 'border:0'}"></div></div><span class="num">${money(st.byType[k])}</span>`).join('')}
+          ${tlist.map(k => `<span class="tdesc">${ico(k)}${esc(typeName(k))}</span><div><div class="hb" style="width:${(st.byType[k] || 0) / typeMax * 100}%;${st.byType[k] ? '' : 'border:0'}"></div></div><span class="num">${money(st.byType[k] || 0)}</span>`).join('')}
         </div>
         <p class="mute" style="margin:10px 0 0">Fixed expenses take ${st.exp ? Math.round(fixedTot / st.exp * 100) : 0}% of this month's spending.</p></fieldset>
       </div>
       ${openHtml}
       <fieldset><legend>Budgets for ${mLabel(m)}${isCur ? ` (day ${todayStr().slice(8)} of ${dim(m)})` : ''}</legend>
         <div class="lv sunken" style="max-height:none"><table><thead><tr><th class="raised">Category</th><th class="raised num">Budget</th><th class="raised num">Spent</th><th class="raised num">Left</th><th class="raised">Used</th><th class="raised">Status</th></tr></thead>
-        <tbody>${budgets.length ? budgets.map(brow).join('') : `<tr class="empty"><td colspan="6">No budgets yet. Set them in Categories &amp; budgets.</td></tr>`}</tbody></table></div>
+        <tbody>${budgets.length ? budgets.map(brow).join('') : `<tr class="empty"><td colspan="6">No budgets yet. Set them in Categories &amp; types.</td></tr>`}</tbody></table></div>
       </fieldset>
       <div class="cols">
         <fieldset><legend>Last six months</legend>${chart}</fieldset>
@@ -686,7 +717,7 @@ const VIEWS = {
   categories() {
     const used = id => S.tx.filter(t => t.cat === id).length + S.fixed.filter(f => f.cat === id).length;
     const totB = S.categories.filter(c => c.kind === 'expense').reduce((a, c) => a + (c.budget || 0), 0);
-    return head('Categories & budgets', 'Changes save as soon as you leave a field.') + `
+    return head('Categories & types', 'Changes save as soon as you leave a field.') + `
       <div class="lv sunken" style="max-height:none"><table><thead><tr><th class="raised">Name</th><th class="raised">Kind</th><th class="raised num">Monthly budget (€)</th><th class="raised num">Entries</th><th class="raised"></th></tr></thead><tbody>
       ${S.categories.map(c => `<tr><td><input class="inp" id="cn-${c.id}" data-cat="${c.id}" data-field="name" value="${esc(c.name)}" aria-label="Category name"></td>
         <td>${c.kind === 'income' ? 'Income' : 'Expense'}</td>
@@ -697,7 +728,15 @@ const VIEWS = {
         <label>Name <input class="inp" id="nc-name" required maxlength="40"></label>
         <label>Kind <select class="inp" id="nc-kind"><option value="expense">Expense</option><option value="income">Income</option></select></label>
         <label>Budget € <input class="inp" id="nc-budget" type="number" min="0" step="10" style="width:90px"></label>
-        <button class="btn raised">Add</button></form></fieldset>`;
+        <button class="btn raised">Add</button></form></fieldset>
+      <fieldset><legend>Entry types</legend>
+        <div class="btnrow" style="margin-bottom:8px"><button class="btn raised" data-act="new-type">New type…</button></div>
+        <div class="lv sunken" style="max-height:none"><table><thead><tr><th class="raised">Type</th><th class="raised">Money</th><th class="raised">Default category</th><th class="raised num">Entries</th><th class="raised"></th></tr></thead><tbody>
+        ${allTypes().map(x => `<tr><td><span class="tdesc">${ico(x.id)}${esc(x.name)}</span></td><td>${x.kind === 'income' ? 'Comes in' : 'Goes out'}</td><td>${esc(catName(defCat(x.id)))}</td>
+          <td class="num">${S.tx.filter(t => t.type === x.id).length}</td>
+          <td style="white-space:nowrap">${x.builtin ? '<span class="mute">Built-in</span>' : `<button class="btn sm raised" data-act="edit-type" data-id="${x.id}">Edit…</button> <button class="btn sm raised" data-act="del-type" data-id="${x.id}">Delete</button>`}</td></tr>`).join('')}
+        </tbody></table></div>
+        <p class="mute" style="margin:8px 0 0">You can also add a type from the Type list in New entry. Expense types appear in the tree under Expenses.</p></fieldset>`;
   },
   cards() {
     const cards = S.accounts.filter(a => a.kind === 'credit'), today = todayStr();
@@ -756,9 +795,9 @@ const VIEWS = {
 };
 
 function regShell() {
-  const f = ui.filter, cats = S.categories.filter(c => !ui.lock || (ui.lock === 'income' ? c.kind === 'income' : c.kind === 'expense'));
+  const f = ui.filter, cats = S.categories.filter(c => !ui.lock || c.kind === (isIncType(ui.lock) ? 'income' : 'expense'));
   return `<div class="filters">
-      ${ui.lock ? '' : `<label>Type <select class="inp" id="flt-type"><option value="">All types</option>${Object.entries(TYPES).map(([k, v]) => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`}
+      ${ui.lock ? '' : `<label>Type <select class="inp" id="flt-type"><option value="">All types</option>${allTypes().map(x => `<option value="${x.id}" ${f.type === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>`}
       <label>Category <select class="inp" id="flt-cat"><option value="">All categories</option>${cats.map(c => `<option value="${c.id}" ${f.cat === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
       <label>Find <input class="inp" id="flt-q" type="search" value="${esc(f.q)}" placeholder="description, store, note" style="width:170px"></label>
       <label>Status <select class="inp" id="flt-status"><option value="">All</option><option value="open" ${f.status === 'open' ? 'selected' : ''}>Not yet paid / received</option><option value="done" ${f.status === 'done' ? 'selected' : ''}>Paid / received</option></select></label>
@@ -782,7 +821,7 @@ function txTable(rows, { sortable = false, compact = false } = {}) {
   const th = ([k, l, c]) => `<th class="raised ${c || ''}" ${sortable ? `data-sort="${k}" title="Sort by ${l.toLowerCase()}"` : ''}>${l}${sortable && ui.sort.key === k ? `<span class="sortmark">${ui.sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`;
   const amt = t => `<span class="${isInc(t) ? 'pos' : ''}">${isInc(t) ? '+' : '−'}${money(t.amount)}</span>`;
   const extra = t => t.type === 'groceries' && t.store ? ` <span class="mute">· ${esc(t.store)}</span>` : t.type === 'fuel' && t.liters ? ` <span class="mute">· ${t.liters.toFixed(1)} L</span>` : '';
-  const tr = t => `<tr data-kind="tx" data-id="${t.id}" class="${ui.sel?.id === t.id ? 'sel' : ''}"><td>${dFmt(t.date)}</td><td class="wrap">${compact ? `<span class="tdesc">${ico(t.type)}<span>${esc(t.desc)}${extra(t)}</span></span>` : esc(t.desc) + extra(t)}</td>${compact ? '' : `<td><span class="tag ${t.type}">${ico(t.type)}${TYPES[t.type]}</span></td><td>${esc(catName(t.cat))}</td><td>${esc(t.paidBy)}</td><td>${methodLabel(t.method)}</td>`}<td class="num">${amt(t)}</td>${compact ? '' : `<td>${statusCell(t)}</td>`}</tr>`;
+  const tr = t => `<tr data-kind="tx" data-id="${t.id}" class="${ui.sel?.id === t.id ? 'sel' : ''}"><td>${dFmt(t.date)}</td><td class="wrap">${compact ? `<span class="tdesc">${ico(t.type)}<span>${esc(t.desc)}${extra(t)}</span></span>` : esc(t.desc) + extra(t)}</td>${compact ? '' : `<td><span class="tag ${esc(t.type)}">${ico(t.type)}${esc(typeName(t.type))}</span></td><td>${esc(catName(t.cat))}</td><td>${esc(t.paidBy)}</td><td>${methodLabel(t.method)}</td>`}<td class="num">${amt(t)}</td>${compact ? '' : `<td>${statusCell(t)}</td>`}</tr>`;
   const out = rows.filter(t => !isInc(t)).reduce((a, t) => a + t.amount, 0), inc = rows.filter(isInc).reduce((a, t) => a + t.amount, 0);
   return `<div class="lv sunken" ${compact ? 'style="max-height:none"' : ''}><table ${compact ? 'style="min-width:0"' : ''}><thead><tr>${cols.map(th).join('')}</tr></thead><tbody>
     ${rows.length ? rows.map(tr).join('') : `<tr class="empty"><td colspan="${cols.length}">No entries match. Press Ins or click New to add one.</td></tr>`}</tbody>
@@ -790,13 +829,16 @@ function txTable(rows, { sortable = false, compact = false } = {}) {
 }
 
 function render() {
-  if (!VIEWS[ui.view]) ui.view = 'overview';
+  const customType = ui.view.startsWith('type:') && S.types.find(x => 'type:' + x.id === ui.view);
+  if (!VIEWS[ui.view] && !customType) ui.view = 'overview';
   ui.lock = '';
   $('#t-file').textContent = '- ' + (S.sample ? '[Sample ledger]' : '[My ledger]');
   $('#mlabel').textContent = mLabel(ui.month);
   renderTree();
   const c = $('#content'), st = c.scrollTop;
-  c.innerHTML = VIEWS[ui.view]();
+  c.innerHTML = customType
+    ? (ui.lock = customType.id, head(customType.name, `All ${esc(customType.name)} entries.`, customType.id) + regShell())
+    : VIEWS[ui.view]();
   regList();
   c.scrollTop = st;
   const ms = monthStats(ui.month);
@@ -834,15 +876,15 @@ const catOpts = (kind, sel) => S.categories.filter(c => c.kind === kind).map(c =
 
 function entryDialog(t, presetType) {
   const isNew = !t;
-  t = t || { date: inMonth({ date: todayStr() }, ui.month) ? todayStr() : `${ui.month}-01`, type: presetType || 'daily', desc: '', amount: '', cat: DEFAULT_CAT[presetType || 'daily'], paidBy: S.members[0], method: (S.accounts.find(a => a.kind === 'debit') || S.accounts[0])?.id || '', cleared: true, note: '' };
-  const kind = ty => ty === 'income' ? 'income' : 'expense';
+  t = t || { date: inMonth({ date: todayStr() }, ui.month) ? todayStr() : `${ui.month}-01`, type: presetType || 'daily', desc: '', amount: '', cat: defCat(presetType || 'daily'), paidBy: S.members[0], method: (S.accounts.find(a => a.kind === 'debit') || S.accounts[0])?.id || '', cleared: true, note: '' };
+  const kind = ty => isIncType(ty) ? 'income' : 'expense';
   dialog(isNew ? 'New entry' : 'Edit entry', `<div class="form">
       <label for="f-date">Date:</label><input class="inp" id="f-date" type="date" value="${t.date}" required>
-      <label for="f-type">Type:</label><span class="typepick"><span id="f-type-ico">${ico(t.type)}</span><select class="inp" id="f-type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}" ${t.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></span>
+      <label for="f-type">Type:</label><span class="typepick"><span id="f-type-ico">${ico(t.type)}</span><select class="inp" id="f-type" data-add="type">${typeOpts(t.type)}</select></span>
       <label for="f-desc">Description:</label><input class="inp" id="f-desc" value="${esc(t.desc)}" maxlength="80" placeholder="e.g. Lunch with colleagues">
       <label for="f-amount">Amount (€):</label><input class="inp num" id="f-amount" type="number" step="0.01" min="0" inputmode="decimal" value="${t.amount}">
       <label for="f-cat">Category:</label><select class="inp" id="f-cat" data-add="cat">${catOpts(kind(t.type), t.cat)}</select>
-      <label for="f-paid" id="f-paid-l">${t.type === 'income' ? 'Received by:' : 'Paid by:'}</label><select class="inp" id="f-paid" data-add="member">${memberOpts(t.paidBy)}</select>
+      <label for="f-paid" id="f-paid-l">${isIncType(t.type) ? 'Received by:' : 'Paid by:'}</label><select class="inp" id="f-paid" data-add="member">${memberOpts(t.paidBy)}</select>
       <label for="f-method" id="f-method-l">Paid with:</label><select class="inp" id="f-method" data-add="method">${methodOpts(t.method)}</select>
       <span></span><span><label id="f-clear-w"><input type="checkbox" id="f-clear" ${t.cleared !== false ? 'checked' : ''}> <span id="f-clear-l">Already paid</span></label><span class="mute" id="f-card-hint" hidden>Paid when you settle the card statement.</span></span>
       <div class="row" id="r-store" ${t.type === 'groceries' ? '' : 'hidden'}><label for="f-store">Store:</label><input class="inp" id="f-store" value="${esc(t.store || '')}" maxlength="40" list="stores"></div>
@@ -854,8 +896,8 @@ function entryDialog(t, presetType) {
       const g = id => $('#' + id).value.trim(), type = g('f-type'), amount = parseFloat(g('f-amount'));
       if (!/^\d{4}-\d{2}-\d{2}$/.test(g('f-date'))) return dlgErr('Enter a date.');
       if (!(amount > 0)) return dlgErr('Enter an amount greater than zero.');
-      const rec = { ...t, id: t.id || uid(), date: g('f-date'), type, desc: g('f-desc') || TYPES[type], amount: r2(amount), cat: g('f-cat'), paidBy: g('f-paid'), method: g('f-method'), cleared: $('#f-clear').checked, note: g('f-note') };
-      if (rec.method !== t.method || type === 'income') delete rec.settled;
+      const rec = { ...t, id: t.id || uid(), date: g('f-date'), type, desc: g('f-desc') || typeName(type), amount: r2(amount), cat: g('f-cat'), paidBy: g('f-paid'), method: g('f-method'), cleared: $('#f-clear').checked, note: g('f-note') };
+      if (rec.method !== t.method || isIncType(type)) delete rec.settled;
       delete rec.store; delete rec.liters; delete rec.odometer;
       if (type === 'groceries' && g('f-store')) rec.store = g('f-store');
       if (type === 'fuel') { const l = parseFloat(g('f-liters')), o = parseInt(g('f-odo'), 10); if (l > 0) rec.liters = l; if (o > 0) rec.odometer = o; }
@@ -868,17 +910,17 @@ function entryDialog(t, presetType) {
   });
   const syncType = () => {
     const ty = $('#f-type').value, k = kind(ty), sel = $('#f-cat');
-    if (cat(sel.value)?.kind !== k || !sel.options.length) { sel.innerHTML = catOpts(k, DEFAULT_CAT[ty]); }
+    if (cat(sel.value)?.kind !== k || !sel.options.length) { sel.innerHTML = catOpts(k, defCat(ty)); }
     $('#r-store').hidden = ty !== 'groceries'; $('#r-fuel').hidden = ty !== 'fuel';
     $('#f-type-ico').innerHTML = ico(ty);
-    const card = ty !== 'income' && acct($('#f-method').value)?.kind === 'credit';
+    const card = !isIncType(ty) && acct($('#f-method').value)?.kind === 'credit';
     $('#f-clear-w').hidden = card; $('#f-card-hint').hidden = !card;
-    $('#f-clear-l').textContent = ty === 'income' ? 'Already received' : 'Already paid';
-    $('#f-method-l').textContent = ty === 'income' ? 'Received into:' : 'Paid with:';
-    $('#f-paid-l').textContent = ty === 'income' ? 'Received by:' : 'Paid by:';
+    $('#f-clear-l').textContent = isIncType(ty) ? 'Already received' : 'Already paid';
+    $('#f-method-l').textContent = isIncType(ty) ? 'Received into:' : 'Paid with:';
+    $('#f-paid-l').textContent = isIncType(ty) ? 'Received by:' : 'Paid by:';
   };
   const ppl = () => { const a = parseFloat($('#f-amount').value), l = parseFloat($('#f-liters').value); $('#f-ppl').textContent = a > 0 && l > 0 ? `Price: €${(a / l).toFixed(3)} per litre` : 'Fill to a full tank so consumption can be calculated.'; };
-  $('#f-type').addEventListener('change', () => { const ty = $('#f-type').value; $('#f-cat').innerHTML = catOpts(kind(ty), DEFAULT_CAT[ty]); syncType(); });
+  $('#f-type').addEventListener('change', () => { const ty = $('#f-type').value; if (ty === '__new') return; $('#f-cat').innerHTML = catOpts(kind(ty), defCat(ty)); syncType(); });
   $('#f-method').addEventListener('change', syncType); $('#f-amount').addEventListener('input', ppl); $('#f-liters').addEventListener('input', ppl); ppl(); syncType();
 }
 
@@ -958,8 +1000,9 @@ function acctDialog(a, onSaved) {
 function quickAdd(sel) {
   const what = sel.dataset.add, done = val => { sel.dataset.prev = val; sel.value = val; sel.dispatchEvent(new Event('change', { bubbles: true })); };
   if (what === 'method') return acctDialog(null, rec => { sel.innerHTML = methodOpts(rec.id); done(rec.id); });
+  if (what === 'type') return typeDialog(null, rec => { sel.innerHTML = typeOpts(rec.id); done(rec.id); });
   if (what === 'cat') {
-    const kind = sel.id === 'f-cat' && $('#f-type')?.value === 'income' ? 'income' : 'expense';
+    const kind = sel.id === 'f-cat' && isIncType($('#f-type')?.value) ? 'income' : 'expense';
     return dialog(kind === 'income' ? 'New income category' : 'New category', `<div class="form">
         <label for="q-name">Name:</label><input class="inp" id="q-name" maxlength="40" placeholder="${kind === 'income' ? 'e.g. Freelance' : 'e.g. Pets'}">
         ${kind === 'expense' ? '<label for="q-budget">Monthly budget (€):</label><input class="inp num" id="q-budget" type="number" min="0" step="10" placeholder="optional">' : ''}</div>`, {
@@ -978,6 +1021,27 @@ function quickAdd(sel) {
         S.members.push(name); commit(`Added ${name} to the household`); sel.innerHTML = memberOpts(name); done(name); return true;
       } });
   }
+}
+function typeDialog(x, onSaved) {
+  const isNew = !x;
+  x = x || { name: '', kind: 'expense', icon: 'tag', cat: '' };
+  const catSel = k => S.categories.filter(c => c.kind === k).map(c => `<option value="${c.id}" ${c.id === x.cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+  dialog(isNew ? 'New entry type' : 'Edit entry type', `<div class="form">
+      <label for="y-name">Name:</label><input class="inp" id="y-name" value="${esc(x.name)}" maxlength="30" placeholder="e.g. Debt">
+      <label for="y-kind">Money:</label><select class="inp" id="y-kind"><option value="expense" ${x.kind === 'expense' ? 'selected' : ''}>Goes out (expense)</option><option value="income" ${x.kind === 'income' ? 'selected' : ''}>Comes in (income)</option></select>
+      <label for="y-cat">Default category:</label><select class="inp" id="y-cat">${catSel(x.kind)}</select>
+      <span>Icon:</span><div class="iconpick" role="radiogroup" aria-label="Icon">${ICON_CHOICES.map(k => `<label title="${k}"><input type="radio" name="y-icon" value="${k}" ${k === x.icon ? 'checked' : ''}>${ico(k)}</label>`).join('')}</div>
+    </div>`, {
+    onSubmit() {
+      const name = $('#y-name').value.trim(), kind = $('#y-kind').value;
+      if (!name) return dlgErr('Enter a name.');
+      if (allTypes().some(t => t.id !== x.id && t.name.toLowerCase() === name.toLowerCase())) return dlgErr(`A type called ${name} already exists.`);
+      const rec = { ...x, id: x.id || 'u_' + uid(), name, kind, cat: $('#y-cat').value, icon: document.querySelector('input[name="y-icon"]:checked')?.value || 'tag' };
+      if (isNew) S.types.push(rec); else S.types[S.types.findIndex(t => t.id === x.id)] = rec;
+      commit(isNew ? `Added type ${name}` : `Saved type ${name}`); onSaved?.(rec); return true;
+    }
+  });
+  $('#y-kind').addEventListener('change', () => { $('#y-cat').innerHTML = catSel($('#y-kind').value); });
 }
 function postFixed() {
   const m = ui.month, due = S.fixed.filter(f => fixedStatus(f, m) === 'due');
@@ -1005,7 +1069,7 @@ function deleteSel() {
 
 function csv() {
   const q = v => { const s = String(v ?? ''); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const rows = S.tx.slice().sort((a, b) => a.date.localeCompare(b.date)).map(t => [t.date, TYPES[t.type], catName(t.cat), t.desc, (isInc(t) ? '' : '-') + t.amount.toFixed(2), t.paidBy, acct(t.method)?.name, STATE[txState(t)][0], t.store, t.liters, t.odometer, t.note].map(q).join(','));
+  const rows = S.tx.slice().sort((a, b) => a.date.localeCompare(b.date)).map(t => [t.date, typeName(t.type), catName(t.cat), t.desc, (isInc(t) ? '' : '-') + t.amount.toFixed(2), t.paidBy, acct(t.method)?.name, STATE[txState(t)][0], t.store, t.liters, t.odometer, t.note].map(q).join(','));
   return ['Date,Type,Category,Description,Amount,Paid by,Paid with,Status,Store,Litres,Odometer,Note', ...rows].join('\n');
 }
 function textDialog(title, intro, text, fileName) {
@@ -1051,6 +1115,13 @@ const actions = {
       onOk() { S.tx.forEach(t => { if (t.settled === p.id) delete t.settled; }); S.cardPayments = S.cardPayments.filter(x => x.id !== p.id); commit('Card payment undone'); } });
   },
   'new-acct': () => acctDialog(null),
+  'new-type': () => typeDialog(null),
+  'edit-type': el => typeDialog(S.types.find(x => x.id === el.dataset.id)),
+  'del-type': el => {
+    const x = S.types.find(t => t.id === el.dataset.id), n = S.tx.filter(t => t.type === x.id).length;
+    if (n) return msgBox('Type in use', `<b>${esc(x.name)}</b> is used by ${n} entries. Rename it instead, or change those entries first.`);
+    S.types = S.types.filter(t => t.id !== x.id); commit(`Deleted type ${x.name}`);
+  },
   'new-cat': () => quickAdd({ dataset: { add: 'cat' }, id: '', dispatchEvent() {} }),
   'new-member': () => quickAdd({ dataset: { add: 'member' }, id: '', dispatchEvent() {} }),
   'edit-acct': el => acctDialog(acct(el.dataset.id)),
