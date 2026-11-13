@@ -1,0 +1,78 @@
+{
+  "name": "clarity",
+  "productName": "Clarity",
+  "version": "1.0.0",
+  "description": "Household accounts with a classic desktop look: fixed bills, daily spending, groceries, fuel, budgets and household settle-up.",
+  "main": "main.js",
+  "desktopName": "clarity.desktop",
+  "author": {
+    "name": "PaulAxer86",
+    "email": "133531079+PaulAxer86@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/PaulAxer86/clarity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PaulAxer86/clarity.git"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build:html": "node scripts/build-html.js",
+    "icon": "node scripts/make-icon.js",
+    "start": "npm run build:html && electron .",
+    "smoke": "npm run build:html && cross-env CLARITY_SMOKE=1 electron .",
+    "dist": "npm run build:html && electron-builder --publish never",
+    "dist:linux": "npm run build:html && electron-builder --linux --publish never",
+    "dist:win": "npm run build:html && electron-builder --win --publish never",
+    "dist:mac": "npm run build:html && electron-builder --mac --publish never"
+  },
+  "build": {
+    "appId": "io.github.paulaxer86.clarity",
+    "productName": "Clarity",
+    "copyright": "Copyright © 2026 PaulAxer86",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "synopsis": "Household accounts with a classic desktop look",
+      "icon": "build/icon.png",
+      "syncDesktopName": true,
+      "executableName": "clarity"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Clarity"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.finance",
+      "icon": "build/icon.png",
+      "identity": null
+    }
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
+  }
+}
